@@ -2,7 +2,7 @@
  * Post-build step: copies server build + tool-schemas to all Revit Addins folders (2023-2027).
  * Runs automatically as part of `npm run build`.
  */
-import { cpSync, existsSync } from "fs";
+import { cpSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
 const APPDATA = process.env.APPDATA || "";
@@ -21,11 +21,17 @@ for (const year of YEARS) {
   const targetDir = join(ADDINS_BASE, year, RELATIVE_PATH);
   if (!existsSync(targetDir)) continue;
 
+  // Seed server/build/ if the plugin is deployed but the server is not yet —
+  // the from-source case (release ZIPs bundle the server; Release build output
+  // does not). Without it the plugin's health check fails: "index.js not found".
   const targetBuildDir = join(targetDir, "server", "build");
-  if (!existsSync(targetBuildDir)) continue;
+  if (!existsSync(targetBuildDir)) mkdirSync(targetBuildDir, { recursive: true });
 
   try {
     cpSync(SOURCE_BUILD, join(targetBuildDir, "index.js"));
+    if (!existsSync(join(targetDir, "server", "package.json"))) {
+      cpSync(join(import.meta.dirname, "package.json"), join(targetDir, "server", "package.json"));
+    }
     if (existsSync(SOURCE_WASM)) {
       cpSync(SOURCE_WASM, join(targetBuildDir, "sql-wasm.wasm"));
     }

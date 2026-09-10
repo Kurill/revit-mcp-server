@@ -134,7 +134,7 @@ cd mcp-servers-for-revit
 
 ### Step 2: Build the MCP Server
 
-> **Note**: `server/build/` is already included in the repository — this step is only needed if you modify the TypeScript source.
+> **Note**: `server/build/` is gitignored, so this step is **required** when building from source — without it the plugin's "Revit MCP Switch" fails its health check with *"index.js not found"*.
 
 ```bash
 cd server
@@ -185,6 +185,14 @@ For a Release build, manually copy the output:
 
 # Copy all contents to the Revit Addins folder
 ```
+
+Then copy the compiled server into the deployed add-in (release ZIPs bundle it, but the Release build output does not include it):
+
+```bash
+node server/deploy-addins.mjs
+```
+
+> **Note on ordering**: `deploy-addins.mjs` only copies into Addins folders where `revit_mcp_plugin/` already exists. `npm run build` runs it automatically, but if you built the server *before* deploying the plugin (the step order above), run it again now — otherwise the "Revit MCP Switch" button fails with *"index.js not found"*.
 
 ---
 

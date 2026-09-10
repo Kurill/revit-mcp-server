@@ -30,6 +30,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+          # Without this, preview SDKs do not resolve and the Revit 2027 build
+          # fails before .NET 10 GA (the reason no release has shipped a 2027 asset).
+          include-prerelease: true
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -78,8 +81,9 @@ jobs:
       - name: Build Revit 2026 (.NET 8)
         run: dotnet build mcp-servers-for-revit.sln -c "Release R26"
 
+      # Deliberately NOT continue-on-error: a failed 2027 build previously shipped
+      # a release with no 2027 asset while the README advertised 2027 support (#5).
       - name: Build Revit 2027 (.NET 10)
-        continue-on-error: true
         run: dotnet build mcp-servers-for-revit.sln -c "Release R27"
 
       # ---------------------------------------------------------------
