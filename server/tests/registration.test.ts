@@ -100,7 +100,7 @@ describe("generated schema files match the live registration (server <-> plugin 
 
   it("tool-schemas.txt is up to date", () => {
     const committed = readRepoFile("tool-schemas.txt");
-    const generated = formatToolSchemasTxt(listedTools);
+    const generated: string = formatToolSchemasTxt(listedTools);
     if (committed !== generated) {
       const c = new Set(committed.trim().split("\n"));
       const g = new Set(generated.trim().split("\n"));

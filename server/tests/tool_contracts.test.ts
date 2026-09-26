@@ -17,6 +17,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { withRevitConnection } from "../src/utils/ConnectionManager.js";
 import { getDatabase } from "../src/database/db.js";
+import { storeProject } from "../src/database/service.js";
 import { registerAllTools, commandJsonNames, type RegisteredToolInfo } from "./helpers/toolHarness.js";
 import { sampleShape, isOptional, wrongValueFor } from "./helpers/zodSample.js";
 import { TOOL_FIXTURES, CLIENT_SIDE_FIELDS, type ToolFixture } from "./fixtures/toolFixtures.js";
@@ -60,6 +61,13 @@ let client: Client;
 
 beforeAll(async () => {
   await getDatabase(); // local sql.js tools need an initialised store (temp HOME, see setup.ts)
+  // store_room_data requires its project to exist; seed the one its generated input names
+  // so the result does not depend on store_project_data having run first.
+  const roomTool = reg.tools.get("store_room_data");
+  if (roomTool) {
+    const { project_name } = sampleShape(shapeOf(roomTool), "min") as { project_name?: string };
+    if (project_name) storeProject({ project_name });
+  }
   client = new Client({ name: "contract-test", version: "test" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await reg.server.connect(serverTransport);

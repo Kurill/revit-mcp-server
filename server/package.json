@@ -11,7 +11,7 @@
         "clean": "rimraf build",
         "prebuild": "npm run clean",
         "build": "node esbuild.config.mjs && node generate-tool-schemas.mjs && node deploy-addins.mjs",
-        "build:check": "tsc --noEmit",
+        "build:check": "tsc --noEmit && tsc -p tsconfig.test.json",
         "test": "vitest run",
         "test:watch": "vitest",
         "prepublishOnly": "npm run build"
