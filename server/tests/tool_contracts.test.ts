@@ -213,7 +213,7 @@ describe.each(toolNames)("tool %s", (name) => {
     if (fixture.fixedParams) expect(params).toMatchObject(fixture.fixedParams);
     if (timeoutMs !== undefined) {
       expect(timeoutMs).toBeGreaterThan(0);
-      expect(timeoutMs).toBeLessThanOrEqual(10 * 60 * 1000);
+      expect(timeoutMs).toBeLessThanOrEqual(fixture.maxTimeoutMs ?? 10 * 60 * 1000);
     }
   });
 

@@ -27,6 +27,8 @@ export interface ToolFixture {
   renamed?: Record<string, string>;
   /** Fixed params the handler must always add (checked with toMatchObject). */
   fixedParams?: Record<string, unknown>;
+  /** Upper bound for the command timeout, when a tool legitimately exceeds the 10-minute default. */
+  maxTimeoutMs?: number;
   /** Free-form note shown nowhere; explains non-obvious entries to reviewers. */
   note?: string;
 }
@@ -60,6 +62,7 @@ export const TOOL_FIXTURES: Record<string, ToolFixture> = {
   create_callout_from_rooms: {},
   create_color_legend: {},
   create_dimensions: {},
+  create_duct: {},
   create_door_schedule_by_room: {
     command: "create_schedule",
     fixedParams: { preset: "door_by_room", categoryName: "OST_Doors" },
@@ -71,6 +74,7 @@ export const TOOL_FIXTURES: Record<string, ToolFixture> = {
   create_level: {},
   create_line_based_element: {},
   create_material: {},
+  create_pipe: {},
   create_material_takeoff_schedule: {
     command: "create_schedule",
     fixedParams: { preset: "material_quantities", type: "material_takeoff" },
@@ -95,6 +99,7 @@ export const TOOL_FIXTURES: Record<string, ToolFixture> = {
   create_structural_framing_system: {},
   create_surface_based_element: {},
   create_text_note: {},
+  create_toposolid: {},
   create_view: {},
   create_view_filter: {},
   create_view_list_schedule: {
@@ -118,6 +123,10 @@ export const TOOL_FIXTURES: Record<string, ToolFixture> = {
   duplicate_view: {},
   export_elements_data: {},
   export_families: {},
+  export_ifc: {
+    maxTimeoutMs: 31 * 60 * 1000,
+    note: "IFC export of a large model can run long; the C# command allows 30 minutes.",
+  },
   export_room_data: {},
   export_schedule: {},
   export_shared_parameter_file: {},
@@ -136,12 +145,16 @@ export const TOOL_FIXTURES: Record<string, ToolFixture> = {
   get_material_properties: {},
   get_material_quantities: {},
   get_materials: {},
+  get_mep_elements: {},
+  get_mep_systems: {},
   get_phases: {},
   get_project_info: {},
+  get_project_location: {},
   get_room_openings: {},
   get_schedule_data: {},
   get_selected_elements: {},
   get_shared_parameters: {},
+  get_toposolids: {},
   get_warnings: {},
   get_worksets: {},
   import_from_excel: {},
@@ -181,6 +194,7 @@ export const TOOL_FIXTURES: Record<string, ToolFixture> = {
   set_material_appearance: {},
   set_material_assets: {},
   set_material_properties: {},
+  set_shared_coordinates: {},
   set_view_crop: {},
   store_project_data: { local: true, note: "Writes the local sql.js store." },
   store_room_data: { local: true, note: "Writes the local sql.js store." },
