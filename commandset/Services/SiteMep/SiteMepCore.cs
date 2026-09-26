@@ -214,10 +214,12 @@ namespace RevitMCPCommandSet.Services.SiteMep
             Dictionary<string, object> after;
             XYZ sharedOfPointAfter;
             string renamedTo = null;
+            List<string> warnings;
 
             using (var tx = new Transaction(doc, transactionName))
             {
                 tx.Start();
+                var failures = FailureCollector.Attach(tx);
                 try
                 {
                     var location = doc.ActiveProjectLocation;
@@ -243,19 +245,21 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     sharedOfPointAfter = InternalToShared(doc).OfPoint(internalPoint);
 
                     if (req.DryRun) tx.RollBack();
-                    else tx.Commit();
+                    else failures.CommitOrThrow(tx);
                 }
                 catch
                 {
                     if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
                     throw;
                 }
+                warnings = failures.Warnings;
             }
 
             return new Dictionary<string, object>
             {
                 ["dryRun"] = req.DryRun,
                 ["committed"] = !req.DryRun,
+                ["warnings"] = warnings,
                 ["internalPoint_mm"] = new Dictionary<string, object> { ["x"] = internalPointMm.X, ["y"] = internalPointMm.Y, ["z"] = internalPointMm.Z },
                 ["requested"] = new Dictionary<string, object>
                 {
@@ -301,6 +305,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
             using (var tx = new Transaction(doc, transactionName))
             {
                 tx.Start();
+                var failures = FailureCollector.Attach(tx);
                 try
                 {
                     var topo = Toposolid.Create(doc, points, type.Id, level.Id);
@@ -325,7 +330,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     }
                     else
                     {
-                        tx.Commit();
+                        failures.CommitOrThrow(tx);
                     }
                 }
                 catch
@@ -333,6 +338,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
                     throw;
                 }
+                info["warnings"] = failures.Warnings;
             }
 
             info["dryRun"] = req.DryRun;
@@ -419,10 +425,12 @@ namespace RevitMCPCommandSet.Services.SiteMep
 
             var sharedToInternal = SharedToInternal(doc);
             var created = new List<Dictionary<string, object>>();
+            List<string> warnings;
 
             using (var tx = new Transaction(doc, transactionName))
             {
                 tx.Start();
+                var failures = FailureCollector.Attach(tx);
                 try
                 {
                     for (int i = 0; i < req.Pipes.Count; i++)
@@ -458,13 +466,14 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     }
 
                     if (req.DryRun) tx.RollBack();
-                    else tx.Commit();
+                    else failures.CommitOrThrow(tx);
                 }
                 catch
                 {
                     if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
                     throw;
                 }
+                warnings = failures.Warnings;
             }
 
             if (req.DryRun) foreach (var c in created) c["elementId"] = null;
@@ -472,6 +481,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
             {
                 ["dryRun"] = req.DryRun,
                 ["committed"] = !req.DryRun,
+                ["warnings"] = warnings,
                 ["coordinateSystem"] = IsShared(req.CoordinateSystem) ? SiteCoordinateSystems.Shared : SiteCoordinateSystems.Internal,
                 ["count"] = created.Count,
                 ["pipes"] = created
@@ -486,10 +496,12 @@ namespace RevitMCPCommandSet.Services.SiteMep
 
             var sharedToInternal = SharedToInternal(doc);
             var created = new List<Dictionary<string, object>>();
+            List<string> warnings;
 
             using (var tx = new Transaction(doc, transactionName))
             {
                 tx.Start();
+                var failures = FailureCollector.Attach(tx);
                 try
                 {
                     for (int i = 0; i < req.Ducts.Count; i++)
@@ -541,13 +553,14 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     }
 
                     if (req.DryRun) tx.RollBack();
-                    else tx.Commit();
+                    else failures.CommitOrThrow(tx);
                 }
                 catch
                 {
                     if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
                     throw;
                 }
+                warnings = failures.Warnings;
             }
 
             if (req.DryRun) foreach (var c in created) c["elementId"] = null;
@@ -555,6 +568,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
             {
                 ["dryRun"] = req.DryRun,
                 ["committed"] = !req.DryRun,
+                ["warnings"] = warnings,
                 ["coordinateSystem"] = IsShared(req.CoordinateSystem) ? SiteCoordinateSystems.Shared : SiteCoordinateSystems.Internal,
                 ["count"] = created.Count,
                 ["ducts"] = created
@@ -863,6 +877,61 @@ namespace RevitMCPCommandSet.Services.SiteMep
             plan["sizeBytes"] = fi.Length;
             plan["lastWriteTimeUtc"] = fi.LastWriteTimeUtc.ToString("o");
             return plan;
+        }
+    }
+
+    /// <summary>
+    /// Keeps Revit's failure dialog out of MCP transactions. Without a preprocessor, a warning
+    /// raised at commit (e.g. "Highlighted toposolid and floor overlap") opens a modal dialog;
+    /// the external event cannot finish until someone clicks it, so every later MCP command
+    /// times out behind it. Warnings are recorded and dismissed so the caller sees them in the
+    /// result; errors are recorded and the transaction is rolled back, and CommitOrThrow turns
+    /// that into an exception carrying the error text.
+    /// </summary>
+    public sealed class FailureCollector : IFailuresPreprocessor
+    {
+        public List<string> Warnings { get; } = new List<string>();
+        public List<string> Errors { get; } = new List<string>();
+
+        public static FailureCollector Attach(Transaction tx)
+        {
+            var collector = new FailureCollector();
+            var options = tx.GetFailureHandlingOptions()
+                .SetFailuresPreprocessor(collector)
+                .SetClearAfterRollback(true)
+                .SetForcedModalHandling(false);
+            tx.SetFailureHandlingOptions(options);
+            return collector;
+        }
+
+        public FailureProcessingResult PreprocessFailures(FailuresAccessor failuresAccessor)
+        {
+            bool hasError = false;
+            foreach (var failure in failuresAccessor.GetFailureMessages())
+            {
+                var text = failure.GetDescriptionText();
+                if (failure.GetSeverity() == FailureSeverity.Warning)
+                {
+                    if (!Warnings.Contains(text)) Warnings.Add(text);
+                    failuresAccessor.DeleteWarning(failure);
+                }
+                else
+                {
+                    if (!Errors.Contains(text)) Errors.Add(text);
+                    hasError = true;
+                }
+            }
+            return hasError ? FailureProcessingResult.ProceedWithRollBack : FailureProcessingResult.Continue;
+        }
+
+        public void CommitOrThrow(Transaction tx)
+        {
+            var status = tx.Commit();
+            if (status != TransactionStatus.Committed)
+            {
+                var why = Errors.Count > 0 ? string.Join("; ", Errors) : $"transaction status {status}";
+                throw new InvalidOperationException($"Revit rejected the change and rolled it back: {why}");
+            }
         }
     }
 }

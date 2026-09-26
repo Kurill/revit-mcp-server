@@ -194,6 +194,36 @@ public class SiteMepCoreTests : RevitApiTest
     }
 
     [Test]
+    public async Task CreateToposolid_OverlappingFloor_ReturnsWarningInsteadOfDialog()
+    {
+        // Live Revit showed "Highlighted toposolid and floor overlap" as a modal dialog at
+        // commit, which blocked every later MCP command. The warning must come back in the result.
+        const double ox = 300000, oy = 300000;
+        var level = new FilteredElementCollector(_doc).OfClass(typeof(Level)).Cast<Level>().OrderBy(l => Math.Abs(l.Elevation)).First();
+        var floorType = new FilteredElementCollector(_doc).OfClass(typeof(FloorType)).Cast<FloorType>().First(t => !t.IsFoundationSlab);
+        using (var tx = new Transaction(_doc, "test floor"))
+        {
+            tx.Start();
+            var p = new[] { new XYZ(ox + 5000, oy + 5000, 0), new XYZ(ox + 15000, oy + 5000, 0), new XYZ(ox + 15000, oy + 15000, 0), new XYZ(ox + 5000, oy + 15000, 0) }
+                .Select(v => v / SiteMepCore.MmPerFoot).ToArray();
+            var loop = new CurveLoop();
+            for (int i = 0; i < p.Length; i++) loop.Append(Line.CreateBound(p[i], p[(i + 1) % p.Length]));
+            Floor.Create(_doc, new List<CurveLoop> { loop }, floorType.Id, level.Id);
+            tx.Commit();
+        }
+
+        var result = SiteMepCore.CreateToposolid(_doc, new CreateToposolidRequest
+        {
+            Points_mm = Hill(ox, oy, level.Elevation * SiteMepCore.MmPerFoot)
+        });
+
+        await Assert.That((bool)result["committed"]).IsTrue();
+        await Assert.That(result["elementId"]).IsNotNull();
+        var warnings = (List<string>)result["warnings"];
+        await Assert.That(warnings.Any(w => w.Contains("overlap", StringComparison.OrdinalIgnoreCase))).IsTrue();
+    }
+
+    [Test]
     public async Task CreateToposolid_DryRun_DoesNotPersist()
     {
         int before = new FilteredElementCollector(_doc).OfClass(typeof(Toposolid)).GetElementCount();
