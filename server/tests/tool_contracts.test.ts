@@ -18,7 +18,12 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { withRevitConnection } from "../src/utils/ConnectionManager.js";
 import { getDatabase } from "../src/database/db.js";
 import { storeProject } from "../src/database/service.js";
-import { registerAllTools, commandJsonNames, type RegisteredToolInfo } from "./helpers/toolHarness.js";
+import {
+  registerAllTools,
+  commandJsonNames,
+  commandSetCommandNames,
+  type RegisteredToolInfo,
+} from "./helpers/toolHarness.js";
 import { sampleShape, isOptional, wrongValueFor } from "./helpers/zodSample.js";
 import { TOOL_FIXTURES, CLIENT_SIDE_FIELDS, type ToolFixture } from "./fixtures/toolFixtures.js";
 
@@ -164,6 +169,24 @@ describe("fixture table", () => {
       .map(([n, f]) => f!.command ?? n)
       .filter((cmd) => !pluginCommands.has(cmd));
     expect(unknown, `commands missing from command.json: ${unknown.join(", ")}`).toEqual([]);
+  });
+
+  it("command.json matches the CommandName of the C# commands in commandset/", () => {
+    const implemented = new Set(commandSetCommandNames());
+    const notImplemented = [...pluginCommands].filter((c) => !implemented.has(c));
+    const notListed = [...implemented].filter((c) => !pluginCommands.has(c));
+    expect(notImplemented, `command.json entries with no C# command: ${notImplemented.join(", ")}`).toEqual([]);
+    expect(notListed, `C# commands missing from command.json: ${notListed.join(", ")}`).toEqual([]);
+  });
+
+  it("every command in command.json is reachable from some MCP tool", () => {
+    // Commands the plugin registers on purpose without a Node tool go here.
+    const PLUGIN_ONLY_COMMANDS: string[] = [];
+    const used = new Set(
+      toolNames.filter((n) => TOOL_FIXTURES[n] && !TOOL_FIXTURES[n].local).map((n) => TOOL_FIXTURES[n].command ?? n)
+    );
+    const orphans = [...pluginCommands].filter((c) => !used.has(c) && !PLUGIN_ONLY_COMMANDS.includes(c));
+    expect(orphans, `command.json commands no tool sends: ${orphans.join(", ")}`).toEqual([]);
   });
 });
 

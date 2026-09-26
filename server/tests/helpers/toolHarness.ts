@@ -83,6 +83,24 @@ export function commandJsonNames(): string[] {
   return json.commands.map((c: any) => c.commandName);
 }
 
+/** `CommandName => "x"` values declared by the C# commands under commandset/. */
+export function commandSetCommandNames(): string[] {
+  const names: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "bin" && entry.name !== "obj") walk(p);
+      } else if (entry.name.endsWith(".cs")) {
+        const src = readFileSync(p, "utf-8");
+        for (const m of src.matchAll(/CommandName\s*=>\s*"([a-z0-9_]+)"/g)) names.push(m[1]);
+      }
+    }
+  };
+  walk(join(REPO_DIR, "commandset"));
+  return names;
+}
+
 export function readRepoFile(rel: string): string {
   return readFileSync(join(REPO_DIR, rel), "utf-8").replace(/\r\n/g, "\n");
 }
