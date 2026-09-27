@@ -1,6 +1,6 @@
 # Revit MCP Server - Complete Reference
 
-> **147 MCP tools** | **155 Revit API tests** | **Revit 2023–2027** | Coordinates in **millimeters (mm)**
+> **147 MCP tools** | **156 Revit API tests** | **Revit 2023–2027** | Coordinates in **millimeters (mm)**
 
 ---
 
@@ -834,8 +834,8 @@ mcp-servers-for-revit/
 │   ├── Services/              # 67 event handlers
 │   └── Models/                # Data models
 ├── server/                    # MCP Server (TypeScript)
-│   └── src/tools/             # 124 tool definitions
-├── tests/                     # Unit tests (140 tests, TUnit)
+│   └── src/tools/             # 147 tool definitions
+├── tests/                     # Revit API tests (156 tests, TUnit)
 ├── command.json               # Command registry
 └── COMMANDS.md                # This file
 ```
