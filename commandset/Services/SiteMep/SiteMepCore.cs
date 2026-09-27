@@ -171,7 +171,11 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     ["northSouth_mm"] = ToMm(surveyShared.Y),
                     ["elevation_mm"] = ToMm(surveyShared.Z),
                     ["internal_mm"] = survey != null ? PointToMm(survey.Position) : null,
+#if REVIT2021_OR_GREATER || REVIT2022_OR_GREATER
+                    // BasePoint.Clipped arrived in the Revit 2021 API. Every current configuration
+                    // defines REVIT2022_OR_GREATER; the first symbol covers a 2021 build.
                     ["clipped"] = survey?.Clipped
+#endif
                 },
                 ["projectBasePoint"] = new Dictionary<string, object>
                 {
