@@ -136,7 +136,7 @@ Write-Host "   $env:COMPUTERNAME  /  $env:USERNAME  /  $(Get-Date -f 'yyyy-MM-dd
 Write-Host "  ============================================================" -ForegroundColor Cyan
 
 
-# ── 1. Node.js ───────────────────────────────────────────────────────────────
+# -- 1. Node.js ---------------------------------------------------------------
 HEAD "1. Node.js"
 $nodeStatus = Get-NodeStatus
 if ($nodeStatus.Available) {
@@ -157,7 +157,7 @@ if ($nodeStatus.Available) {
 }
 
 
-# ── 2. Local MCP server (installed with the plugin) ──────────────────────────
+# -- 2. Local MCP server (installed with the plugin) --------------------------
 HEAD "2. Local MCP server"
 $serverPath = Get-McpServerPath
 if ($serverPath) {
@@ -169,7 +169,7 @@ if ($serverPath) {
 }
 
 
-# ── 3. Claude Desktop config ─────────────────────────────────────────────────
+# -- 3. Claude Desktop config -------------------------------------------------
 HEAD "3. Claude Desktop configuration"
 
 # Find config folder -- standard install or MSIX (Microsoft Store)
@@ -262,7 +262,7 @@ try {
 } catch {}
 
 
-# ── 4. Revit plugin ───────────────────────────────────────────────────────────
+# -- 4. Revit plugin -----------------------------------------------------------
 HEAD "4. Revit plugin"
 
 $anyRevit = $false
@@ -327,7 +327,7 @@ if (-not $anyRevit) {
 }
 
 
-# ── 5. Revit process + TCP ────────────────────────────────────────────────────
+# -- 5. Revit process + TCP ----------------------------------------------------
 HEAD "5. Revit process and MCP server"
 
 $revitProcs = Get-Process -Name "Revit" -ErrorAction SilentlyContinue
@@ -361,7 +361,7 @@ try {
 }
 
 
-# ── Summary ───────────────────────────────────────────────────────────────────
+# -- Summary -------------------------------------------------------------------
 Write-Host ""
 Write-Host "  ============================================================" -ForegroundColor Cyan
 Write-Host "   Results:  $pass OK  /  $fixed fixed  /  $fail failed"       -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Yellow' })
