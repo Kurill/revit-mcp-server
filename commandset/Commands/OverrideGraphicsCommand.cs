@@ -37,7 +37,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.ProjectionLineWeight = parameters?["projectionLineWeight"]?.Value<int>() ?? -1;
                     _handler.Action = parameters?["action"]?.Value<string>() ?? "set";
 
-                    if (RaiseAndWaitForCompletion(15000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

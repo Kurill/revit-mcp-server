@@ -101,6 +101,10 @@ namespace RevitMCPCommandSet.Services
                     try
                     {
                         // Check if the tag has a valid host
+                        // GetTaggedLocalElementIds is empty for a tag on an element in a linked model.
+                        if (tag.GetTaggedElementIds().Any(link => link.LinkInstanceId != ElementId.InvalidElementId))
+                            continue;
+
                         var localIds = tag.GetTaggedLocalElementIds();
                         if (localIds == null || localIds.Count == 0)
                         {
@@ -139,8 +143,7 @@ namespace RevitMCPCommandSet.Services
                     }
                     catch
                     {
-                        isEmpty = true;
-                        reason = "Error reading tag properties";
+                        continue;
                     }
 
                     if (isEmpty)

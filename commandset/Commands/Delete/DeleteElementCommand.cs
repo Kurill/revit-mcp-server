@@ -39,7 +39,7 @@ namespace RevitMCPCommandSet.Commands.Delete
                     _handler.DryRun = dryRun;
 
                     // Raise external event and wait for completion
-                    if (RaiseAndWaitForCompletion(15000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         if (_handler.IsSuccess)
                         {

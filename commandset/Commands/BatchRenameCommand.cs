@@ -32,7 +32,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.Suffix = parameters?["suffix"]?.Value<string>() ?? "";
                     _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? true;
 
-                    if (RaiseAndWaitForCompletion(15000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

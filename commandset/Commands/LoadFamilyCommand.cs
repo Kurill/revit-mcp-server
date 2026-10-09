@@ -30,7 +30,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.SourceTypeId = parameters?["sourceTypeId"]?.Value<long>() ?? 0;
                     _handler.NewTypeName = parameters?["newTypeName"]?.Value<string>() ?? "";
 
-                    if (RaiseAndWaitForCompletion(30000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

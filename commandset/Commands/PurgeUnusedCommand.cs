@@ -27,7 +27,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? true;
                     _handler.MaxElements = parameters?["maxElements"]?.Value<int>() ?? 500;
 
-                    if (RaiseAndWaitForCompletion(30000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

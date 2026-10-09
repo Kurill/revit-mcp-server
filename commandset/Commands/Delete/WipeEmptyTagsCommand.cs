@@ -32,7 +32,7 @@ namespace RevitMCPCommandSet.Commands.Delete
                 _handler.ViewId = viewId;
                 _handler.Categories = categories;
 
-                if (RaiseAndWaitForCompletion(30000))
+                if (RaiseAndWaitForCompletion(120000))
                 {
                     if (_handler.ErrorMessage != null)
                         throw new Exception(_handler.ErrorMessage);

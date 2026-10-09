@@ -33,7 +33,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
                         parameters?["maxResults"]?.Value<int>() ?? 500
                     );
 
-                    if (RaiseAndWaitForCompletion(30000))
+                    if (RaiseAndWaitForCompletion(120000))
                         return _handler.Result;
 
                     throw new TimeoutException("Manage unplaced views timed out");

@@ -29,7 +29,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.DeleteLinks = parameters?["deleteLinks"]?.Value<bool>() ?? false;
                     _handler.ElementIds = parameters?["elementIds"]?.ToObject<List<long>>() ?? new List<long>();
 
-                    if (RaiseAndWaitForCompletion(15000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

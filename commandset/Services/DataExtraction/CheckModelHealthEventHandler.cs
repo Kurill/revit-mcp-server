@@ -68,6 +68,10 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     .OfClass(typeof(Viewport))
                     .Cast<Viewport>()
                     .Select(vp => vp.ViewId)
+                    .Concat(new FilteredElementCollector(doc)
+                        .OfClass(typeof(ScheduleSheetInstance))
+                        .Cast<ScheduleSheetInstance>()
+                        .Select(ssi => ssi.ScheduleId))
                     .ToHashSet();
 
                 int unusedViewCount = allViews.Count(v => !viewsOnSheets.Contains(v.Id));

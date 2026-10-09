@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using RevitMCPCommandSet.Helpers;
 using RevitMCPCommandSet.Models.Common;
 using RevitMCPSDK.API.Interfaces;
 using System;
@@ -63,11 +64,16 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                 var doc = app.ActiveUIDocument.Document;
 
                 // Get all view IDs that are placed on sheets
+                // Schedules are placed through ScheduleSheetInstance, not Viewport.
                 var placedViewIds = new HashSet<ElementId>(
                     new FilteredElementCollector(doc)
                         .OfClass(typeof(Viewport))
                         .Cast<Viewport>()
                         .Select(vp => vp.ViewId)
+                        .Concat(new FilteredElementCollector(doc)
+                            .OfClass(typeof(ScheduleSheetInstance))
+                            .Cast<ScheduleSheetInstance>()
+                            .Select(ssi => ssi.ScheduleId))
                 );
 
                 // Get all views, excluding templates and browser-organization views
@@ -83,7 +89,13 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     .ToList();
 
                 // Filter to unplaced views only
-                var unplacedViews = allViews.Where(v => !placedViewIds.Contains(v.Id)).ToList();
+                // Deleting a parent view also deletes its dependent views, which may be on sheets.
+                var activeViewId = doc.ActiveView?.Id;
+                var unplacedViews = allViews
+                    .Where(v => !placedViewIds.Contains(v.Id)
+                        && v.Id != activeViewId
+                        && !v.GetDependentViewIds().Any(placedViewIds.Contains))
+                    .ToList();
 
                 // Apply view type filter
                 if (ViewTypes.Count > 0)
@@ -201,7 +213,12 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                 return;
             }
 
-            // Actual deletion
+            if (!ConfirmationHelper.Confirm("delete unplaced views:", views.Count))
+            {
+                Result = new AIResult<object> { Success = false, Message = "Deletion cancelled by the user." };
+                return;
+            }
+
             int deleted = 0;
             int failed = 0;
             var results = new List<object>();
