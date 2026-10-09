@@ -7,7 +7,7 @@ import { rawToolResponse, rawToolError } from "../utils/compactTool.js";
 export function registerSendCodeToRevitTool(server: McpServer) {
   server.tool(
     "send_code_to_revit",
-    "Execute custom C# code in Revit. Your code runs inside a static method with signature: `public static object Execute(Document document, object[] parameters)`. Available variables: `document` (Autodesk.Revit.DB.Document — the active document), `parameters` (object[] — optional args). Auto-imported namespaces: System, System.Linq, Autodesk.Revit.DB, Autodesk.Revit.UI, System.Collections.Generic. Use `return` to send results back. In 'auto' mode your code runs inside a Transaction; use 'none' to manage transactions yourself. The user must approve each run in a Revit dialog that shows the code, so prefer the dedicated tools.",
+    "Execute custom C# code in Revit. Your code runs inside a static method with signature: `public static object Execute(Document document, object[] parameters)`. Available variables: `document` (Autodesk.Revit.DB.Document — the active document), `parameters` (object[] — optional args). Auto-imported namespaces: System, System.Linq, Autodesk.Revit.DB, Autodesk.Revit.UI, System.Collections.Generic. Use `return` to send results back. In 'auto' mode your code runs inside a Transaction; use 'none' to manage transactions yourself. By default the user must approve each run in a Revit dialog that shows the code (the user can turn this off with \"confirm\": false in the add-in's commandRegistry.json), so prefer the dedicated tools.",
     {
       code: z
         .string()

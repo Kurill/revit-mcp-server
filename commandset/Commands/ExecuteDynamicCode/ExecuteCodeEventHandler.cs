@@ -52,7 +52,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                 var doc = app.ActiveUIDocument.Document;
                 ResultInfo = new ExecutionResultInfo();
 
-                if (!ConfirmRun(_generatedCode, _transactionMode))
+                if (ConfirmationRequired() && !ConfirmRun(_generatedCode, _transactionMode))
                 {
                     ResultInfo.Success = false;
                     ResultInfo.ErrorMessage = "Execution cancelled by the user.";
@@ -100,6 +100,29 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
             {
                 TaskCompleted = true;
                 _resetEvent.Set();
+            }
+        }
+
+        // "confirm": false on the send_code_to_revit entry of Commands/commandRegistry.json
+        // (the file the plugin reads "enabled" from) turns the dialog off. Read on every run so
+        // it can be toggled without restarting Revit; anything missing or unreadable keeps the dialog.
+        private static bool ConfirmationRequired()
+        {
+            try
+            {
+                var dllDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                var registry = Path.GetFullPath(Path.Combine(dllDir, "..", "..", "commandRegistry.json"));
+                if (!File.Exists(registry))
+                    return true;
+
+                var json = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(registry));
+                var entry = json["commands"]?.FirstOrDefault(c => (string)c["commandName"] == "send_code_to_revit");
+                var confirm = entry?["confirm"];
+                return confirm == null || confirm.Type != Newtonsoft.Json.Linq.JTokenType.Boolean || (bool)confirm;
+            }
+            catch
+            {
+                return true;
             }
         }
 
