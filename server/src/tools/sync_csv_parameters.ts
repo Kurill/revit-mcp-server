@@ -18,7 +18,7 @@ export function registerSyncCsvParametersTool(server: McpServer) {
                 z.string(),
                 z.union([z.string(), z.number(), z.boolean()])
               )
-              .describe("Parameter name → value pairs to set"),
+              .describe("Parameter name → value pairs to set. Plain numbers on length/area/angle parameters are Revit internal units (feet, square feet, radians); a value with a unit, e.g. \"3000 mm\", is parsed in the project's units."),
           })
         )
         .describe("Array of element update definitions"),

@@ -185,8 +185,10 @@ namespace RevitMCPCommandSet.Services
                     return false;
                 case StorageType.Double:
                     if (value is double dblVal) return param.Set(dblVal);
-                    if (double.TryParse(value.ToString(), out double parsedDbl)) return param.Set(parsedDbl);
-                    return false;
+                    if (double.TryParse(value.ToString(), System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out double parsedDbl))
+                        return param.Set(parsedDbl);
+                    return param.SetValueString(value.ToString());
                 case StorageType.ElementId:
                     if (long.TryParse(value.ToString(), out long parsedLong))
 #if REVIT2024_OR_GREATER

@@ -210,7 +210,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                         if (double.TryParse(value, System.Globalization.NumberStyles.Any,
                             System.Globalization.CultureInfo.InvariantCulture, out double dblVal))
                             return param.Set(dblVal);
-                        return false;
+                        return param.SetValueString(value);
                     case StorageType.ElementId:
                         if (long.TryParse(value, out long idVal))
                             return param.Set(Utils.ElementIdExtensions.FromLong(idVal));

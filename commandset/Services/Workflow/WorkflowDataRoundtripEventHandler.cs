@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -51,6 +52,7 @@ namespace RevitMCPCommandSet.Services.Workflow
                     string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                     FilePath = Path.Combine(desktop, $"RevitRoundtrip_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
                 }
+                ExportPathGuard.Check(FilePath, ".xlsx");
 
                 // Collect elements by category
                 var elements = new List<Element>();

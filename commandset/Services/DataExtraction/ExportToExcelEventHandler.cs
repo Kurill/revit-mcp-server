@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -59,6 +60,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                     FilePath = Path.Combine(desktop, $"RevitExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
                 }
+                ExportPathGuard.Check(FilePath, ".xlsx");
 
                 // Collect elements by category
                 var collector = new FilteredElementCollector(doc)

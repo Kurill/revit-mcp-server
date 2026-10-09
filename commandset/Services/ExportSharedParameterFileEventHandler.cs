@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,6 +39,7 @@ namespace RevitMCPCommandSet.Services
                     string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                     FilePath = Path.Combine(desktop, $"SharedParameters_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
                 }
+                ExportPathGuard.Check(FilePath, ".txt");
 
                 // Get current shared parameter file (if any)
                 var currentFile = app.Application.SharedParametersFilename;
@@ -80,6 +82,14 @@ namespace RevitMCPCommandSet.Services
                         var definition = iterator.Key;
                         if (definition is ExternalDefinition extDef)
                         {
+                            defaultGroup.Definitions.Create(
+                                new ExternalDefinitionCreationOptions(extDef.Name, extDef.GetDataType())
+                                {
+                                    GUID = extDef.GUID,
+                                    Description = extDef.Description,
+                                    Visible = extDef.Visible,
+                                    UserModifiable = extDef.UserModifiable
+                                });
                             exportedParams.Add(new
                             {
                                 name = extDef.Name,
@@ -87,13 +97,21 @@ namespace RevitMCPCommandSet.Services
                                 parameterType = extDef.GetDataType().TypeId ?? "Text"
                             });
                         }
-                        else if (definition is InternalDefinition intDef)
+                        // In a project the binding map keys are InternalDefinitions even
+                        // for shared parameters; the GUID lives on the SharedParameterElement.
+                        else if (definition is InternalDefinition intDef
+                                 && doc.GetElement(intDef.Id) is SharedParameterElement shared)
                         {
+                            defaultGroup.Definitions.Create(
+                                new ExternalDefinitionCreationOptions(intDef.Name, intDef.GetDataType())
+                                {
+                                    GUID = shared.GuidValue
+                                });
                             exportedParams.Add(new
                             {
                                 name = intDef.Name,
-                                guid = (string)null,
-                                parameterType = "InternalDefinition"
+                                guid = shared.GuidValue.ToString(),
+                                parameterType = intDef.GetDataType().TypeId
                             });
                         }
                     }
@@ -113,8 +131,7 @@ namespace RevitMCPCommandSet.Services
                 finally
                 {
                     // Restore original shared parameter file
-                    if (!string.IsNullOrEmpty(currentFile) && File.Exists(currentFile))
-                        app.Application.SharedParametersFilename = currentFile;
+                    app.Application.SharedParametersFilename = currentFile ?? "";
 
                     if (File.Exists(tempFile))
                         File.Delete(tempFile);

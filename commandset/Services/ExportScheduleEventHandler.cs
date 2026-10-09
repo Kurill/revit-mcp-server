@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Utils;
 using System.IO;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -58,6 +59,7 @@ namespace RevitMCPCommandSet.Services
                 if (string.IsNullOrEmpty(exportPath))
                     exportPath = Path.Combine(Path.GetTempPath(), $"schedule_{ScheduleId}.txt");
 
+                ExportPathGuard.Check(exportPath, ".txt", ".csv", ".tsv");
                 string directory = Path.GetDirectoryName(exportPath);
                 string filename = Path.GetFileName(exportPath);
 
