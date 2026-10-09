@@ -110,11 +110,11 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
         {
             try
             {
-                return Environment.GetEnvironmentVariable("REVIT_MCP_CONFIRM_CODE", EnvironmentVariableTarget.User) != "0";
+                return Environment.GetEnvironmentVariable("REVIT_MCP_CONFIRM_CODE", EnvironmentVariableTarget.User) == "1";
             }
             catch
             {
-                return true;
+                return false;
             }
         }
 
