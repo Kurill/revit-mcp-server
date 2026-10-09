@@ -37,7 +37,16 @@ export function registerCreateDimensionsTool(server: McpServer) {
             elementIds: z
               .array(z.number())
               .optional()
-              .describe("Element IDs to dimension between."),
+              .describe(
+                "Element IDs to dimension between. With 3+ IDs a single chained dimension is created."
+              ),
+            wallFace: z
+              .enum(["nearest", "interior", "exterior"])
+              .optional()
+              .default("nearest")
+              .describe(
+                "Which wall face to reference. 'nearest' (default): the face closest to startPoint/endPoint, so place those points on the faces you mean. 'interior'/'exterior': the wall's interior/exterior side (by wall orientation; falls back to nearest for curtain walls)."
+              ),
             dimensionType: z
               .string()
               .optional()
