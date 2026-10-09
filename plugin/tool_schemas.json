@@ -827,7 +827,7 @@
         },
         "tolerance": {
           "type": "number",
-          "description": "Tolerance in mm (default: 0, exact intersection)"
+          "description": "Ignored: the check uses Revit's exact solid intersection."
         },
         "maxResults": {
           "type": "number",

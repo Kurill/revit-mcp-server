@@ -18,6 +18,8 @@ namespace RevitMCPCommandSet.Services
         public int MaxResults { get; set; } = 100;
         public AIResult<object> Result { get; private set; }
 
+        private const int TimeBudgetMs = 20000;
+
         public void SetParameters(string categoryA, string categoryB, List<long> elementIdsA, List<long> elementIdsB, double tolerance, int maxResults)
         {
             CategoryA = categoryA ?? "";
@@ -56,53 +58,56 @@ namespace RevitMCPCommandSet.Services
                 }
 
                 var clashes = new List<object>();
+                var setBIds = setB.Select(e => e.Id).ToList();
+                var budget = System.Diagnostics.Stopwatch.StartNew();
+                bool timedOut = false;
 
                 foreach (var elemA in setA)
                 {
                     if (clashes.Count >= MaxResults) break;
+                    if (budget.ElapsedMilliseconds > TimeBudgetMs) { timedOut = true; break; }
 
-                    // Create filter to find elements in set B that intersect with elemA
-                    var bbFilter = new ElementIntersectsElementFilter(elemA);
+                    var bb = elemA.get_BoundingBox(null);
+                    if (bb == null) continue;
 
-                    foreach (var elemB in setB)
+                    // Bounding-box quick filter first; the solid check runs only on survivors.
+                    var hits = new FilteredElementCollector(doc, setBIds)
+                        .WherePasses(new BoundingBoxIntersectsFilter(new Outline(bb.Min, bb.Max)))
+                        .WherePasses(new ElementIntersectsElementFilter(elemA));
+
+                    foreach (var elemB in hits)
                     {
                         if (clashes.Count >= MaxResults) break;
                         if (elemA.Id == elemB.Id) continue;
-
-                        try
+                        clashes.Add(new
                         {
-                            if (bbFilter.PassesFilter(elemB))
-                            {
-                                clashes.Add(new
-                                {
 #if REVIT2024_OR_GREATER
-                                    elementIdA = elemA.Id.Value,
-                                    elementIdB = elemB.Id.Value,
+                            elementIdA = elemA.Id.Value,
+                            elementIdB = elemB.Id.Value,
 #else
-                                    elementIdA = elemA.Id.IntegerValue,
-                                    elementIdB = elemB.Id.IntegerValue,
+                            elementIdA = elemA.Id.IntegerValue,
+                            elementIdB = elemB.Id.IntegerValue,
 #endif
-                                    elementNameA = elemA.Name,
-                                    elementNameB = elemB.Name,
-                                    categoryA = elemA.Category?.Name ?? "",
-                                    categoryB = elemB.Category?.Name ?? ""
-                                });
-                            }
-                        }
-                        catch { /* skip elements that can't be checked */ }
+                            elementNameA = elemA.Name,
+                            elementNameB = elemB.Name,
+                            categoryA = elemA.Category?.Name ?? "",
+                            categoryB = elemB.Category?.Name ?? ""
+                        });
                     }
                 }
 
                 Result = new AIResult<object>
                 {
                     Success = true,
-                    Message = $"Found {clashes.Count} clashes between {setA.Count} and {setB.Count} elements",
+                    Message = $"Found {clashes.Count} clashes between {setA.Count} and {setB.Count} elements" +
+                              (timedOut ? $" (stopped after {TimeBudgetMs / 1000} s; narrow the sets for a complete check)" : ""),
                     Response = new
                     {
                         setACount = setA.Count,
                         setBCount = setB.Count,
                         clashCount = clashes.Count,
                         maxResults = MaxResults,
+                        stoppedEarly = timedOut,
                         clashes
                     }
                 };
