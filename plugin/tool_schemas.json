@@ -5966,7 +5966,7 @@
                   "number",
                   "boolean"
                 ],
-                "description": "Value to set."
+                "description": "Value to set. A plain number on a length/area/angle parameter is in Revit internal units (feet, square feet, radians), the same units get_element_parameters returns. A string with a unit, e.g. \"3000 mm\", is parsed in the project's units."
               }
             },
             "required": [
@@ -6610,7 +6610,7 @@
                     "boolean"
                   ]
                 },
-                "description": "Parameter name → value pairs to set"
+                "description": "Parameter name → value pairs to set. Plain numbers on length/area/angle parameters are Revit internal units (feet, square feet, radians); a value with a unit, e.g. \"3000 mm\", is parsed in the project's units."
               }
             },
             "required": [
