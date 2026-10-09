@@ -220,7 +220,7 @@ namespace RevitMCPCommandSet.Services
                             success = false,
                             message = "No room tag family type found in the project"
                         };
-                        tran.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         return;
                     }
 
@@ -319,7 +319,7 @@ namespace RevitMCPCommandSet.Services
                         }
                     }
 
-                    tran.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tran.Commit());
 
                     string resultMessage = skippedRooms.Count > 0
                         ? $"Created {createdTags.Count} tags. Skipped {skippedRooms.Count} rooms that already had tags."
@@ -346,7 +346,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (tran.GetStatus() == TransactionStatus.Started)
-                            tran.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         throw;
                     }
                 }

@@ -175,7 +175,7 @@ namespace RevitMCPCommandSet.Services
                         }
                     }
 
-                    trans.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
 
                     // 9. Get member beam IDs
                     ICollection<ElementId> beamIds = beamSystem.GetBeamIds();

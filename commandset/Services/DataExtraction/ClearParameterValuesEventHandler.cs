@@ -158,7 +158,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     catch
                     {
                         if (!DryRun && transaction?.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

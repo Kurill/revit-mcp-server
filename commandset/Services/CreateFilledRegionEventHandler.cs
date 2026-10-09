@@ -75,12 +75,12 @@ namespace RevitMCPCommandSet.Services
                     try
                     {
                         filledRegion = FilledRegion.Create(doc, regionType.Id, view.Id, new List<CurveLoop> { curveLoop });
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

@@ -283,12 +283,12 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         }
                     }
 
-                    t.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
                 }
                 catch
                 {
                     if (t.GetStatus() == TransactionStatus.Started)
-                        t.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                     throw;
                 }
             }
@@ -361,7 +361,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
 
                         if (sectionView == null)
                         {
-                            t.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                             continue;
                         }
 
@@ -376,7 +376,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         string viewName = BuildViewName(roomName, roomNumber, dirDisplay, levelName);
                         try { sectionView.Name = viewName; } catch { /* name collision */ }
 
-                        t.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
 
                         successCount++;
                         createdViews.Add(new
@@ -396,7 +396,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     catch (Exception ex)
                     {
                         if (t.GetStatus() == TransactionStatus.Started)
-                            t.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
 
                         createdViews.Add(new
                         {

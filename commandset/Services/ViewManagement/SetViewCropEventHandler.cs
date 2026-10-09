@@ -63,7 +63,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         if (Reset)
                         {
                             view.CropBoxActive = false;
-                            transaction.Commit();
+                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                             Result = new AIResult<object>
                             {
@@ -158,7 +158,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                             view.CropBoxVisible = CropVisible.Value;
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         // Build response with crop box info in mm
                         var currentCropBox = view.CropBox;
@@ -193,7 +193,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

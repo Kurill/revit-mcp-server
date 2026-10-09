@@ -52,7 +52,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                             break;
                     }
 
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 }
 
                 // Get schedulable fields
@@ -70,7 +70,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 {
                     tx.Start();
                     doc.Delete(schedule.Id);
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 }
 
                 Result = new AIResult<object>

@@ -201,7 +201,7 @@ namespace RevitMCPCommandSet.Services
                         trans.Start();
                         targetView.IsSectionBoxActive = true;
                         targetView.SetSectionBox(boundingBox);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
 
                     // Move to view center
@@ -214,7 +214,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         SetElementsColor(doc, elementIds, setting.ColorValue);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     // Scroll to make these elements visible
                     uidoc.ShowElements(elementIds);
@@ -242,7 +242,7 @@ namespace RevitMCPCommandSet.Services
                             doc.ActiveView.SetElementOverrides(id, overrideSettings);
                         }
 
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 
@@ -254,7 +254,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         doc.Delete(elementIds);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 
@@ -264,7 +264,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         doc.ActiveView.HideElements(elementIds);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 
@@ -274,7 +274,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         doc.ActiveView.HideElementsTemporary(elementIds);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 
@@ -284,7 +284,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         doc.ActiveView.IsolateElementsTemporary(elementIds);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 
@@ -294,7 +294,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         doc.ActiveView.UnhideElements(elementIds);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 
@@ -304,7 +304,7 @@ namespace RevitMCPCommandSet.Services
                     {
                         trans.Start();
                         doc.ActiveView.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                     return true;
 

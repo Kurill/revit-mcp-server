@@ -137,7 +137,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         name = newView?.Name ?? ""
                     });
                 }
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             }
             return new { success = true, duplicated = duplicated.Count, templates = duplicated };
         }
@@ -160,7 +160,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     doc.Delete(elemId);
                     deleted++;
                 }
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             }
             return new { success = true, deleted };
         }
@@ -184,7 +184,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                 tx.Start();
                 string oldName = view.Name;
                 view.Name = NewName;
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 return new { success = true, oldName, newName = NewName };
             }
         }
@@ -219,7 +219,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     v.Name = v.Name.Replace(FindText, ReplaceText);
                     renamed++;
                 }
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             }
             return new { success = true, renamed };
         }

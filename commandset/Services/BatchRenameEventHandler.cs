@@ -111,7 +111,7 @@ namespace RevitMCPCommandSet.Services
                         });
                     }
 
-                    transaction?.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction?.Commit());
                 }
 
                 Result = new AIResult<object>

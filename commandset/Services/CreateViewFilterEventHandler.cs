@@ -118,12 +118,12 @@ namespace RevitMCPCommandSet.Services
                         filter = ParameterFilterElement.Create(doc, FilterName, categoryIds);
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }
@@ -186,12 +186,12 @@ namespace RevitMCPCommandSet.Services
                         view.SetFilterOverrides(filter.Id, overrideSettings);
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }

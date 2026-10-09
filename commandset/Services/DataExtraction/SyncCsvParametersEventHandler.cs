@@ -150,12 +150,12 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     }
 
                     if (!_dryRun && transaction != null)
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (!_dryRun && transaction != null)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
                 finally

@@ -197,7 +197,7 @@ namespace RevitMCPCommandSet.Services
                                 // Skip tags that can't be deleted
                             }
                         }
-                        tx.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                     }
                 }
 

@@ -51,7 +51,7 @@ namespace RevitMCPCommandSet.Services
 
                             if (existingMat == null)
                             {
-                                transaction.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                                 Result = new AIResult<object>
                                 {
                                     Success = false,
@@ -70,7 +70,7 @@ namespace RevitMCPCommandSet.Services
 
                         if (material == null)
                         {
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                             Result = new AIResult<object>
                             {
                                 Success = false,
@@ -105,7 +105,7 @@ namespace RevitMCPCommandSet.Services
                             material.MaterialClass = MaterialClassName;
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         // Build response
                         string colorHex = null;
@@ -139,7 +139,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

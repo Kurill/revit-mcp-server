@@ -67,12 +67,12 @@ namespace RevitMCPCommandSet.Services
                     {
                         copiedIds = ElementTransformUtils.CopyElements(
                             sourceView, ids, targetView, transform, new CopyPasteOptions());
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

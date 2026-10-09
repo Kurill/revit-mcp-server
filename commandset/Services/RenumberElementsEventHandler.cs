@@ -100,7 +100,7 @@ namespace RevitMCPCommandSet.Services
                         currentNumber += Increment;
                     }
 
-                    transaction?.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction?.Commit());
                 }
 
                 int successCount = renumberResults.Count;

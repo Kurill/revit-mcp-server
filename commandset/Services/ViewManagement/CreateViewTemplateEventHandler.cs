@@ -116,7 +116,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     // 5. Rename the template
                     template.Name = TemplateName;
 
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
 
                     Result = new AIResult<object>
                     {

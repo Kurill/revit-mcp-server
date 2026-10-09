@@ -62,12 +62,12 @@ namespace RevitMCPCommandSet.Services
                     {
                         var curveLoops = new List<CurveLoop> { boundary };
                         floor = Floor.Create(doc, curveLoops, floorType.Id, level.Id);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

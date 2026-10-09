@@ -248,12 +248,12 @@ namespace RevitMCPCommandSet.Services.SiteMep
                     after = GetProjectLocation(doc);
                     sharedOfPointAfter = InternalToShared(doc).OfPoint(internalPoint);
 
-                    if (req.DryRun) tx.RollBack();
+                    if (req.DryRun) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     else failures.CommitOrThrow(tx);
                 }
                 catch
                 {
-                    if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
+                    if (tx.GetStatus() == TransactionStatus.Started) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     throw;
                 }
                 warnings = failures.Warnings;
@@ -329,7 +329,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
 
                     if (req.DryRun)
                     {
-                        tx.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                         info["elementId"] = null; // rolled back, id no longer valid
                     }
                     else
@@ -339,7 +339,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
                 }
                 catch
                 {
-                    if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
+                    if (tx.GetStatus() == TransactionStatus.Started) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     throw;
                 }
                 info["warnings"] = failures.Warnings;
@@ -469,12 +469,12 @@ namespace RevitMCPCommandSet.Services.SiteMep
                         }
                     }
 
-                    if (req.DryRun) tx.RollBack();
+                    if (req.DryRun) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     else failures.CommitOrThrow(tx);
                 }
                 catch
                 {
-                    if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
+                    if (tx.GetStatus() == TransactionStatus.Started) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     throw;
                 }
                 warnings = failures.Warnings;
@@ -556,12 +556,12 @@ namespace RevitMCPCommandSet.Services.SiteMep
                         }
                     }
 
-                    if (req.DryRun) tx.RollBack();
+                    if (req.DryRun) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     else failures.CommitOrThrow(tx);
                 }
                 catch
                 {
-                    if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
+                    if (tx.GetStatus() == TransactionStatus.Started) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                     throw;
                 }
                 warnings = failures.Warnings;
@@ -869,7 +869,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
                 }
                 finally
                 {
-                    if (tx.GetStatus() == TransactionStatus.Started) tx.RollBack();
+                    if (tx.GetStatus() == TransactionStatus.Started) RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                 }
             }
 
@@ -930,7 +930,7 @@ namespace RevitMCPCommandSet.Services.SiteMep
 
         public void CommitOrThrow(Transaction tx)
         {
-            var status = tx.Commit();
+            var status = RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             if (status != TransactionStatus.Committed)
             {
                 var why = Errors.Count > 0 ? string.Join("; ", Errors) : $"transaction status {status}";

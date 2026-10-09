@@ -118,7 +118,7 @@ namespace RevitMCPCommandSet.Services
                         if (!inserted)
                             inserted = doc.ParameterBindings.ReInsert(externalDef, binding, groupTypeId);
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         var warningMessage = unresolvedCategories.Count > 0
                             ? $" Warning: could not resolve categories: {string.Join(", ", unresolvedCategories)}."
@@ -144,7 +144,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

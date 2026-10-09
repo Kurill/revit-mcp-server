@@ -68,7 +68,7 @@ namespace RevitMCPCommandSet.Services
                         {
                             if (!Overwrite)
                             {
-                                transaction.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                                 Result = new AIResult<object>
                                 {
                                     Success = false,
@@ -81,7 +81,7 @@ namespace RevitMCPCommandSet.Services
 
                         var selFilter = SelectionFilterElement.Create(doc, SelectionName);
                         selFilter.SetElementIds(ids);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -98,7 +98,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

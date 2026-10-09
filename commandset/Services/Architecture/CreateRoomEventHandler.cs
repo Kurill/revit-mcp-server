@@ -160,7 +160,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                         {
                             // If location-based creation failed, create an unplaced room
                             // This can happen if the point is not inside an enclosed area
-                            tx.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                             continue;
                         }
 
@@ -248,7 +248,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                             }
                         }
 
-                        tx.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
 
                         // Add to result list
                         createdRooms.Add(new RoomResultInfo
@@ -266,7 +266,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                         catch
                         {
                             if (tx.GetStatus() == TransactionStatus.Started)
-                                tx.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                             throw;
                         }
                     }

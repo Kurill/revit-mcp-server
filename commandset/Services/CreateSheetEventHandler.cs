@@ -95,7 +95,7 @@ namespace RevitMCPCommandSet.Services
                         if (!string.IsNullOrEmpty(SheetInfo.SheetName))
                             sheet.Name = SheetInfo.SheetName;
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -116,7 +116,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

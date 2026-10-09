@@ -194,11 +194,11 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
                             createdDimensionIds.Add(dimension.Id.GetIntValue());
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

@@ -132,7 +132,7 @@ namespace RevitMCPCommandSet.Services.Workflow
                             }
                         }
                     }
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 }
 
                 Result = new

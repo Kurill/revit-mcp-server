@@ -176,7 +176,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                                 }
                             }
 
-                            t.Commit();
+                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
 
                             createdSheets.Add(new
                             {
@@ -193,7 +193,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                             catch
                             {
                                 if (t.GetStatus() == TransactionStatus.Started)
-                                    t.RollBack();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                 throw;
                             }
                         }

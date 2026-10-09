@@ -88,7 +88,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                                         AlreadyExisted = true
                                     });
 
-                                    tx.RollBack();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                                     continue;
                                 }
                             }
@@ -160,7 +160,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                                     }
                                 }
 
-                                tx.Commit();
+                                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
 
                                 // Add to existing names set
                                 existingLevelNames.Add(newLevel.Name);
@@ -178,13 +178,13 @@ namespace RevitMCPCommandSet.Services.Architecture
                             }
                             else
                             {
-                                tx.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                                 warnings.Add($"Failed to create level '{levelInfo.Name}'");
                             }
                         }
                         catch (Exception ex)
                         {
-                            tx.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                             warnings.Add($"Error creating level '{levelInfo.Name}': {ex.Message}");
                         }
                     }

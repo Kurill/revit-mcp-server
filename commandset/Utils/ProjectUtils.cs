@@ -416,7 +416,7 @@ namespace RevitMCPCommandSet.Utils
                         {
                             view3D = View3D.CreateIsometric(doc, vft.Id);
                         }
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                 }
 
@@ -533,7 +533,7 @@ namespace RevitMCPCommandSet.Utils
                         {
                             view3D = View3D.CreateIsometric(doc, vft.Id);
                         }
-                        trans.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                     }
                 }
 

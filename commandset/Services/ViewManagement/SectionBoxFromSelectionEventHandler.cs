@@ -130,7 +130,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         targetView.IsolateElementsTemporary(elementIds);
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                     Result = new AIResult<object>
                     {
@@ -160,7 +160,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

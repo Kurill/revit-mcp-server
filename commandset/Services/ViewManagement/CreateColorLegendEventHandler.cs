@@ -140,12 +140,12 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                             }
                         }
 
-                        t.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
                         }
                         catch
                         {
                             if (t.GetStatus() == TransactionStatus.Started)
-                                t.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                             throw;
                         }
                     }
@@ -182,11 +182,11 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                                     legendViewId = legendView.Id.IntegerValue;
 #endif
                                 }
-                                t.Commit();
+                                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
                             }
                             catch
                             {
-                                t.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                             }
                         }
                     }

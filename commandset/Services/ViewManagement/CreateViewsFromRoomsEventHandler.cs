@@ -125,7 +125,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
 
                                     try { createdView.Name = viewName; } catch { }
 
-                                    t.Commit();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
 
                                     successCount++;
                                     createdViews.Add(new
@@ -145,13 +145,13 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                                 }
                                 else if (viewTypeName != "elevation") // elevation handled inside
                                 {
-                                    t.RollBack();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                 }
                                 }
                                 catch
                                 {
                                     if (t.GetStatus() == TransactionStatus.Started)
-                                        t.RollBack();
+                                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                     throw;
                                 }
                             }

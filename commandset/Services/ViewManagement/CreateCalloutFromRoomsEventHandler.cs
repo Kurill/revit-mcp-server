@@ -157,7 +157,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         }
                     }
 
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 }
 
                 Result = new { success = true, created = created.Count, views = created };

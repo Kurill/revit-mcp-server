@@ -180,7 +180,7 @@ namespace RevitMCPCommandSet.Services
                         });
                     }
 
-                    trans.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                 }
 
                 int renamedCount = createdGrids.Count(g => g.WasRenamed);

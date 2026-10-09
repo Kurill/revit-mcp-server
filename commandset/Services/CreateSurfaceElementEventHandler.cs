@@ -253,7 +253,7 @@ namespace RevitMCPCommandSet.Services
                                 break;
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                 }
                 string message = $"Successfully created {elementIds.Count} element(s).";

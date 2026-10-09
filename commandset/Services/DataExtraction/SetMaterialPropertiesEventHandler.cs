@@ -147,12 +147,12 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                             }
                         }
 
-                        if (!DryRun) transaction.Commit();
+                        if (!DryRun) RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (!DryRun && transaction?.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

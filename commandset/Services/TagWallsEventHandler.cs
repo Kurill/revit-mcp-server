@@ -68,7 +68,7 @@ namespace RevitMCPCommandSet.Services
                             success = false,
                             message = "No wall tag family type found"
                         };
-                        tran.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         return;
                     }
 
@@ -171,7 +171,7 @@ try
 #endif
                     }
 
-                    tran.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tran.Commit());
 
                     TaggingResults = new
                     {
@@ -185,7 +185,7 @@ try
                     catch
                     {
                         if (tran.GetStatus() == TransactionStatus.Started)
-                            tran.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         throw;
                     }
                 }
