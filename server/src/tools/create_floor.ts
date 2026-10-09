@@ -31,7 +31,7 @@ export function registerCreateFloorTool(server: McpServer) {
       levelElevation: z
         .number()
         .optional()
-        .describe("Level elevation in mm for the floor."),
+        .describe("Level elevation in mm; the level closest to this elevation is used (default 0). Ignored when roomId is given."),
       isStructural: z
         .boolean()
         .optional()

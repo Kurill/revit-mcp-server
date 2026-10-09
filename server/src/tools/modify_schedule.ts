@@ -36,11 +36,11 @@ export function registerModifyScheduleTool(server: McpServer) {
       filters: z
         .array(
           z.object({
-            fieldName: z.string().describe("Field name to filter by"),
+            fieldName: z.string().describe("Field name to filter by (field name or column heading in the schedule; English built-in names like 'Mark' also work on localized Revit). A field not yet in the schedule is added as a hidden field."),
             filterType: z
               .string()
-              .describe("Equal, NotEqual, GreaterThan, LessThan, Contains, etc."),
-            filterValue: z.string().describe("Filter value"),
+              .describe("Equal, NotEqual, GreaterThan, LessThan, Contains, BeginsWith, HasValue, etc. Substring types (Contains/BeginsWith/EndsWith) only work on text fields; element-reference fields such as 'Type' accept Equal/NotEqual only. An invalid combination returns an error."),
+            filterValue: z.string().describe("Filter value. Numbers are in the project's display units; for element-reference fields give the element name or id."),
           })
         )
         .optional()

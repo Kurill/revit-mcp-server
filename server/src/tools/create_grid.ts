@@ -21,7 +21,7 @@ export function registerCreateGridTool(server: McpServer) {
       xStartLabel: z
         .string()
         .default("A")
-        .describe("Starting label for X-axis grids (e.g., 'A' or '1')"),
+        .describe("Starting label for X-axis grids; a prefix is kept (e.g. 'A' -> A,B..; 'T1' numeric -> T1,T2..; 'TA' alphabetic -> TA,TB..)"),
       xNamingStyle: z
         .enum(["alphabetic", "numeric"])
         .default("alphabetic")
@@ -38,7 +38,7 @@ export function registerCreateGridTool(server: McpServer) {
       yStartLabel: z
         .string()
         .default("1")
-        .describe("Starting label for Y-axis grids (e.g., '1' or 'A')"),
+        .describe("Starting label for Y-axis grids; a prefix is kept (e.g. '1' -> 1,2..; 'T1' numeric -> T1,T2..; 'TA' alphabetic -> TA,TB..)"),
       yNamingStyle: z
         .enum(["alphabetic", "numeric"])
         .default("numeric")

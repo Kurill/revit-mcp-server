@@ -81,10 +81,13 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
         try
         {
             var createdDimensionIds = new List<int>();
+            var errors = new List<string>();
 
             // Process each dimension in the list
-            foreach (var dimInfo in DimensionsToCreate)
+            for (var index = 0; index < DimensionsToCreate.Count; index++)
             {
+                var dimInfo = DimensionsToCreate[index];
+
                 // Get active view or specified view
                 View view = null;
                 if (dimInfo.ViewId > 0)
@@ -104,112 +107,48 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
 
                     try
                     {
-                        // Convert points to Revit coordinates
-                        var startPoint = ConvertToInternalCoordinates(
-                            dimInfo.StartPoint.X,
-                            dimInfo.StartPoint.Y,
-                            dimInfo.StartPoint.Z
-                        );
-
-                        var endPoint = ConvertToInternalCoordinates(
-                            dimInfo.EndPoint.X,
-                            dimInfo.EndPoint.Y,
-                            dimInfo.EndPoint.Z
-                        );
-
-                        var linePoint = dimInfo.LinePoint != null
-                            ? ConvertToInternalCoordinates(
-                                dimInfo.LinePoint.X,
-                                dimInfo.LinePoint.Y,
-                                dimInfo.LinePoint.Z
-                              )
-                            : new XYZ(
-                                (startPoint.X + endPoint.X) / 2,
-                                (startPoint.Y + endPoint.Y) / 2 + 1.0,
-                                (startPoint.Z + endPoint.Z) / 2
-                              );
-
-                        // Create dimension based on type
-                        Dimension dimension = null;
-
-                        if (dimInfo.ElementIds != null && dimInfo.ElementIds.Count > 0)
+                        var dimension = CreateSingleDimension(dimInfo, view, out var error);
+                        if (dimension == null)
                         {
-                            // Create dimension between elements
-                            var dimensionDirection = (endPoint - startPoint).Normalize();
-                            var anchors = new[] { startPoint, endPoint };
-                            var references = new ReferenceArray();
-                            foreach (var elementId in dimInfo.ElementIds)
-                            {
-                                var element = Doc.GetElement(new ElementId(elementId));
-                                if (element != null)
-                                {
-                                    // Get appropriate reference for this element
-                                    foreach (var reference in GetReferences(element, view, dimensionDirection, anchors, dimInfo.WallFace))
-                                    {
-                                        references.Append(reference);
-                                    }
-                                }
-                            }
-
-                            if (references.Size >= 2)
-                            {
-                                // Create dimension line with references
-                                var line = Line.CreateBound(startPoint, endPoint);
-                                dimension = Doc.Create.NewDimension(view, line, references);
-                            }
+                            // Rolling back also removes a degenerate dimension and any temporary helpers
+                            errors.Add($"Dimension {index + 1}: {error}");
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
+                            continue;
                         }
-                        else
+
+                        // Apply dimension style if specified
+                        if (dimInfo.DimensionStyleId > 0)
                         {
-                            // Create a simple dimension line between two points
-                            var line = Line.CreateBound(startPoint, endPoint);
-                            var dimDirection = (endPoint - startPoint).Normalize();
-
-                            // Pick references from geometry in the view at those points
-                            var refArray = new ReferenceArray();
-                            var startRef = FindReferenceAtPoint(view, startPoint, dimDirection, dimInfo.WallFace);
-                            var endRef = FindReferenceAtPoint(view, endPoint, dimDirection, dimInfo.WallFace);
-
-                            if (startRef != null && endRef != null)
+                            var dimensionType = Doc.GetElement(new ElementId(dimInfo.DimensionStyleId)) as DimensionType;
+                            if (dimensionType != null)
                             {
-                                refArray.Append(startRef);
-                                refArray.Append(endRef);
-                                dimension = Doc.Create.NewDimension(view, line, refArray);
+                                dimension.DimensionType = dimensionType;
                             }
                         }
 
-                        if (dimension != null)
-                        {
-                            // Apply dimension style if specified
-                            if (dimInfo.DimensionStyleId > 0)
-                            {
-                                var dimensionType = Doc.GetElement(new ElementId(dimInfo.DimensionStyleId)) as DimensionType;
-                                if (dimensionType != null)
-                                {
-                                    dimension.DimensionType = dimensionType;
-                                }
-                            }
+                        // Apply additional parameters
+                        ApplyDimensionParameters(dimension, dimInfo);
 
-                            // Apply additional parameters
-                            ApplyDimensionParameters(dimension, dimInfo);
-
-                            createdDimensionIds.Add(dimension.Id.GetIntValue());
-                        }
-
+                        var dimensionId = dimension.Id.GetIntValue();
                         RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
+                        createdDimensionIds.Add(dimensionId);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
-                        throw;
+                        errors.Add($"Dimension {index + 1}: {ex.Message}");
                     }
                 }
             }
 
-            // Set successful result
+            var message = $"Created {createdDimensionIds.Count} of {DimensionsToCreate.Count} dimension(s). ElementIds saved in Response.";
+            if (errors.Count > 0)
+                message += " Errors: " + string.Join(" | ", errors);
+
             Result = new AIResult<List<int>>
             {
-                Success = true,
-                Message = $"Successfully created {createdDimensionIds.Count} dimensions. ElementIds saved in Response.",
+                Success = errors.Count == 0,
+                Message = message,
                 Response = createdDimensionIds
             };
         }
@@ -252,6 +191,176 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    ///     A planar reference candidate with its plane in model coordinates
+    /// </summary>
+    private sealed class RefCandidate
+    {
+        public Reference Reference;
+        public XYZ Origin;
+        public XYZ Normal;
+    }
+
+    // A face of a family instance must be this parallel to the dimension direction (|cos|)
+    private const double PARALLEL_ALIGNMENT = 0.99;
+
+    // The temporary reference plane used to locate family reference planes sits this far
+    // behind the anchor, so it never coincides with one of them
+    private const double PROBE_OFFSET_FEET = 100.0;
+
+    // Left/Right/Front/Back first: they bound the family's footprint
+    private static readonly FamilyInstanceReferenceType[] PlaneReferenceOrder =
+    {
+        FamilyInstanceReferenceType.Left,
+        FamilyInstanceReferenceType.Right,
+        FamilyInstanceReferenceType.Front,
+        FamilyInstanceReferenceType.Back,
+        FamilyInstanceReferenceType.CenterLeftRight,
+        FamilyInstanceReferenceType.CenterFrontBack,
+        FamilyInstanceReferenceType.StrongReference,
+        FamilyInstanceReferenceType.WeakReference,
+        FamilyInstanceReferenceType.Top,
+        FamilyInstanceReferenceType.Bottom,
+        FamilyInstanceReferenceType.CenterElevation
+    };
+
+    /// <summary>
+    ///     Creates one dimension inside the caller's open transaction.
+    ///     Returns null and sets <paramref name="error" /> when it cannot be created.
+    /// </summary>
+    private Dimension CreateSingleDimension(DimensionCreationInfo dimInfo, View view, out string error)
+    {
+        error = null;
+
+        // Convert points to Revit coordinates
+        var startPoint = ConvertToInternalCoordinates(dimInfo.StartPoint.X, dimInfo.StartPoint.Y, dimInfo.StartPoint.Z);
+        var endPoint = ConvertToInternalCoordinates(dimInfo.EndPoint.X, dimInfo.EndPoint.Y, dimInfo.EndPoint.Z);
+        var linePoint = dimInfo.LinePoint != null
+            ? ConvertToInternalCoordinates(dimInfo.LinePoint.X, dimInfo.LinePoint.Y, dimInfo.LinePoint.Z)
+            : null;
+
+        if (startPoint.DistanceTo(endPoint) < 1e-6)
+        {
+            error = "startPoint and endPoint must be different points.";
+            return null;
+        }
+
+        var dimensionDirection = (endPoint - startPoint).Normalize();
+        var line = BuildDimensionLine(view, startPoint, endPoint, linePoint);
+
+        var references = new ReferenceArray();
+        var seen = new HashSet<string>();
+
+        void AddReference(Reference reference)
+        {
+            if (reference != null && seen.Add(StableKey(reference)))
+                references.Append(reference);
+        }
+
+        if (dimInfo.ElementIds != null && dimInfo.ElementIds.Count > 0)
+        {
+            // Create dimension between elements
+            var elementIds = dimInfo.ElementIds.Distinct().ToList();
+            var anchors = new[] { startPoint, endPoint };
+            foreach (var elementId in elementIds)
+            {
+                var element = Doc.GetElement(new ElementId(elementId));
+                if (element == null)
+                    continue;
+
+                // A single element is measured across itself: one reference near each point
+                var anchorSets = elementIds.Count == 1
+                    ? new[] { new[] { startPoint }, new[] { endPoint } }
+                    : new[] { anchors };
+                foreach (var anchorSet in anchorSets)
+                {
+                    foreach (var reference in GetReferences(element, view, dimensionDirection, anchorSet, dimInfo.WallFace))
+                        AddReference(reference);
+                }
+            }
+        }
+        else
+        {
+            // Pick references from geometry in the view at those points
+            AddReference(FindReferenceAtPoint(view, startPoint, dimensionDirection, dimInfo.WallFace));
+            AddReference(FindReferenceAtPoint(view, endPoint, dimensionDirection, dimInfo.WallFace));
+        }
+
+        if (references.Size < 2)
+        {
+            error = $"found {references.Size} usable reference(s), at least 2 are needed. " +
+                    "Check elementIds and that startPoint/endPoint lie on the faces to measure.";
+            return null;
+        }
+
+        var dimension = Doc.Create.NewDimension(view, line, references);
+        if (dimension == null)
+        {
+            error = "Revit did not create the dimension.";
+            return null;
+        }
+
+        Doc.Regenerate();
+        if (IsDegenerate(dimension))
+        {
+            Doc.Delete(dimension.Id);
+            error = "the dimension has no value (its references could not be measured). " +
+                    "Try other elements or place startPoint/endPoint on the faces to measure.";
+            return null;
+        }
+
+        return dimension;
+    }
+
+    /// <summary>
+    ///     The dimension line runs parallel to start→end; with a linePoint it is shifted
+    ///     sideways so that it passes through that point.
+    /// </summary>
+    private static Line BuildDimensionLine(View view, XYZ startPoint, XYZ endPoint, XYZ linePoint)
+    {
+        if (linePoint == null)
+            return Line.CreateBound(startPoint, endPoint);
+
+        var direction = (endPoint - startPoint).Normalize();
+        var offset = linePoint - startPoint;
+        offset -= direction.Multiply(offset.DotProduct(direction));
+
+        // Stay in the plane of start/end as seen by the view (e.g. ignore Z in a plan)
+        var viewDirection = view?.ViewDirection;
+        if (viewDirection != null && !(view is View3D))
+            offset -= viewDirection.Multiply(offset.DotProduct(viewDirection));
+
+        return Line.CreateBound(startPoint + offset, endPoint + offset);
+    }
+
+    private static bool IsDegenerate(Dimension dimension)
+    {
+        if (dimension.NumberOfSegments > 1)
+        {
+            foreach (DimensionSegment segment in dimension.Segments)
+            {
+                if (segment.Value == null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        return dimension.Value == null;
+    }
+
+    private string StableKey(Reference reference)
+    {
+        try
+        {
+            return reference.ConvertToStableRepresentation(Doc);
+        }
+        catch (Exception)
+        {
+            return Guid.NewGuid().ToString();
+        }
+    }
 
     /// <summary>
     ///     Gets references for an element for dimensioning
@@ -303,11 +412,11 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
 
             if (geometry != null)
             {
-                var faces = new List<PlanarFace>();
+                var faces = new List<RefCandidate>();
                 foreach (var obj in geometry)
                 {
                     if (obj is Solid solid && solid.Faces.Size > 0)
-                        CollectVerticalPlanarFaces(solid, faces);
+                        CollectVerticalPlanarFaces(solid, Transform.Identity, faces);
                 }
 
                 var bestRef = PickFaceReference(faces, dimensionDirection, anchors);
@@ -333,25 +442,24 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
             var geometry = familyInstance.get_Geometry(options);
             if (geometry != null && dimensionDirection != null)
             {
-                var faces = new List<PlanarFace>();
-                foreach (var obj in geometry)
-                {
-                    if (obj is Solid s && s.Faces.Size > 0)
-                        CollectVerticalPlanarFaces(s, faces);
-                    else if (obj is GeometryInstance gi)
-                    {
-                        foreach (var subObj in gi.GetInstanceGeometry())
-                        {
-                            if (subObj is Solid ss && ss.Faces.Size > 0)
-                                CollectVerticalPlanarFaces(ss, faces);
-                        }
-                    }
-                }
+                // Faces from GetInstanceGeometry carry references Revit measures in the family's
+                // own coordinates (dimensions to the internal origin, or no value). Symbol
+                // geometry references work; their planes are mapped to the model here.
+                var faces = new List<RefCandidate>();
+                CollectInstanceFaces(geometry, Transform.Identity, faces, 0);
 
-                var bestRef = PickFaceReference(faces, dimensionDirection, anchors);
+                var bestRef = PickFaceReference(faces, dimensionDirection, anchors, PARALLEL_ALIGNMENT);
                 if (bestRef != null)
                 {
                     references.Add(bestRef);
+                    return references;
+                }
+
+                // Meshes only (typical for downloaded furniture): use the family's reference planes
+                var planeRef = PickFamilyPlaneReference(familyInstance, view, dimensionDirection, anchors);
+                if (planeRef != null)
+                {
+                    references.Add(planeRef);
                     return references;
                 }
             }
@@ -368,13 +476,45 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
         return references;
     }
 
-    private static void CollectVerticalPlanarFaces(Solid solid, List<PlanarFace> faces)
+    private static void CollectVerticalPlanarFaces(Solid solid, Transform transform, List<RefCandidate> faces)
     {
         foreach (Face face in solid.Faces)
         {
+            if (!(face is PlanarFace planarFace) || face.Reference == null)
+                continue;
+
+            var normal = transform.OfVector(planarFace.FaceNormal).Normalize();
             // Skip horizontal faces (top/bottom) - useless in plan view
-            if (face is PlanarFace planarFace && face.Reference != null && Math.Abs(planarFace.FaceNormal.Z) <= 0.9)
-                faces.Add(planarFace);
+            if (Math.Abs(normal.Z) > 0.9)
+                continue;
+
+            faces.Add(new RefCandidate
+            {
+                Reference = face.Reference,
+                Origin = transform.OfPoint(planarFace.Origin),
+                Normal = normal
+            });
+        }
+    }
+
+    /// <summary>
+    ///     Collects faces of a family instance from symbol geometry, composing the
+    ///     instance transforms (including nested instances) to model coordinates.
+    /// </summary>
+    private static void CollectInstanceFaces(GeometryElement geometry, Transform transform, List<RefCandidate> faces, int depth)
+    {
+        foreach (var obj in geometry)
+        {
+            if (obj is Solid solid && solid.Faces.Size > 0)
+            {
+                CollectVerticalPlanarFaces(solid, transform, faces);
+            }
+            else if (obj is GeometryInstance instance && depth < 5)
+            {
+                var symbolGeometry = instance.GetSymbolGeometry();
+                if (symbolGeometry != null)
+                    CollectInstanceFaces(symbolGeometry, transform.Multiply(instance.Transform), faces, depth + 1);
+            }
         }
     }
 
@@ -384,7 +524,8 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
     ///     broken by distance to the anchor points - the caller's start/end points mark
     ///     which face they mean.
     /// </summary>
-    private static Reference PickFaceReference(List<PlanarFace> faces, XYZ dimensionDirection, IList<XYZ> anchors)
+    private static Reference PickFaceReference(List<RefCandidate> faces, XYZ dimensionDirection, IList<XYZ> anchors,
+        double minAlignment = 0)
     {
         if (faces.Count == 0)
             return null;
@@ -394,22 +535,25 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
             return faces[0].Reference;
 
         const double parallelTolerance = 1e-3;
-        var bestAlignment = faces.Max(f => Math.Abs(f.FaceNormal.DotProduct(dimensionDirection)));
+        var bestAlignment = faces.Max(f => Math.Abs(f.Normal.DotProduct(dimensionDirection)));
+        if (bestAlignment < minAlignment)
+            return null;
+
         var candidates = faces
-            .Where(f => Math.Abs(f.FaceNormal.DotProduct(dimensionDirection)) >= bestAlignment - parallelTolerance)
+            .Where(f => Math.Abs(f.Normal.DotProduct(dimensionDirection)) >= bestAlignment - parallelTolerance)
             .ToList();
 
         if (anchors == null || anchors.Count == 0 || candidates.Count == 1)
             return candidates[0].Reference;
 
-        PlanarFace best = null;
+        RefCandidate best = null;
         var bestDistance = double.MaxValue;
         foreach (var face in candidates)
         {
             foreach (var anchor in anchors)
             {
                 // Distance from the anchor to the face's plane
-                var distance = Math.Abs((anchor - face.Origin).DotProduct(face.FaceNormal));
+                var distance = Math.Abs((anchor - face.Origin).DotProduct(face.Normal));
                 if (distance < bestDistance)
                 {
                     bestDistance = distance;
@@ -419,6 +563,138 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
         }
 
         return best.Reference;
+    }
+
+    /// <summary>
+    ///     Picks the family reference plane (Left/Right/Front/Back first) perpendicular to the
+    ///     dimension direction and nearest to the anchors.
+    /// </summary>
+    private Reference PickFamilyPlaneReference(FamilyInstance familyInstance, View view, XYZ dimensionDirection,
+        IList<XYZ> anchors)
+    {
+        var candidates = new List<Reference>();
+        var seen = new HashSet<string>();
+        foreach (var referenceType in PlaneReferenceOrder)
+        {
+            IList<Reference> typeRefs;
+            try
+            {
+                typeRefs = familyInstance.GetReferences(referenceType);
+            }
+            catch (Exception)
+            {
+                continue;
+            }
+
+            foreach (var reference in typeRefs)
+            {
+                if (seen.Add(StableKey(reference)))
+                    candidates.Add(reference);
+            }
+        }
+
+        if (candidates.Count == 0)
+            return null;
+        if (anchors == null || anchors.Count == 0)
+            return candidates[0];
+
+        var positions = MeasurePlanePositions(view, candidates, anchors[0], dimensionDirection);
+        // Positions could not be measured (e.g. no reference planes in this view): take the first one
+        if (positions == null)
+            return candidates[0];
+
+        Reference best = null;
+        var bestDistance = double.MaxValue;
+        foreach (var (reference, position) in positions)
+        {
+            foreach (var anchor in anchors)
+            {
+                var distance = Math.Abs(position - anchor.DotProduct(dimensionDirection));
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = reference;
+                }
+            }
+        }
+
+        // null when no candidate is perpendicular to the dimension direction
+        return best;
+    }
+
+    /// <summary>
+    ///     Family reference planes expose no geometry, so each candidate is located by
+    ///     dimensioning it against a temporary reference plane at a known position. Returns
+    ///     each measurable candidate's coordinate along <paramref name="direction" />, or null
+    ///     when the probe cannot be created in this view. Temporary elements are deleted.
+    /// </summary>
+    private List<(Reference reference, double position)> MeasurePlanePositions(View view, List<Reference> candidates,
+        XYZ anchor, XYZ direction)
+    {
+        var viewDirection = view.ViewDirection;
+        var across = viewDirection.CrossProduct(direction);
+        if (across.IsZeroLength())
+            return null;
+        across = across.Normalize();
+
+        var probeOrigin = anchor - direction.Multiply(PROBE_OFFSET_FEET);
+        ReferencePlane probe;
+        try
+        {
+            probe = Doc.Create.NewReferencePlane(probeOrigin, probeOrigin + across, viewDirection, view);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        if (probe == null)
+            return null;
+
+        var results = new List<(Reference reference, double position)>();
+        try
+        {
+            var probeLine = Line.CreateBound(probeOrigin, probeOrigin + direction);
+            var probePosition = probeOrigin.DotProduct(direction);
+            foreach (var candidate in candidates)
+            {
+                Dimension temp = null;
+                try
+                {
+                    var refs = new ReferenceArray();
+                    refs.Append(probe.GetReference());
+                    refs.Append(candidate);
+                    temp = Doc.Create.NewDimension(view, probeLine, refs);
+                    if (temp == null)
+                        continue;
+
+                    Doc.Regenerate();
+                    if (temp.Value == null)
+                        continue;
+
+                    // Origin is the midpoint of the single segment: it tells on which side of the
+                    // probe the candidate lies; Value gives the distance.
+                    var side = (temp.Origin - probeOrigin).DotProduct(direction) >= 0 ? 1.0 : -1.0;
+                    results.Add((candidate, probePosition + side * temp.Value.Value));
+                }
+                catch (Exception)
+                {
+                    // Not parallel to the probe, so not usable for this dimension direction
+                }
+                finally
+                {
+                    if (temp != null && temp.IsValidObject)
+                        Doc.Delete(temp.Id);
+                }
+            }
+        }
+        finally
+        {
+            if (probe.IsValidObject)
+                Doc.Delete(probe.Id);
+        }
+
+        return results;
     }
 
     /// <summary>

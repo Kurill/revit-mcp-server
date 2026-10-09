@@ -25,6 +25,8 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
                 {
                     _handler.CategoryName = parameters?["categoryName"]?.Value<string>() ?? "OST_Rooms";
                     _handler.ScheduleType = parameters?["scheduleType"]?.Value<string>() ?? "regular";
+                    _handler.Limit = parameters?["limit"]?.Value<int?>() ?? 200;
+                    _handler.NameFilter = parameters?["nameFilter"]?.Value<string>();
 
                     _handler.SetParameters();
 

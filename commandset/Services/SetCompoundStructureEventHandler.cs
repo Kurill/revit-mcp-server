@@ -25,9 +25,11 @@ namespace RevitMCPCommandSet.Services
 
         public void Execute(UIApplication app)
         {
+            Document doc = null;
+            ElementId duplicatedTypeId = null;
             try
             {
-                var doc = app.ActiveUIDocument.Document;
+                doc = app.ActiveUIDocument.Document;
 
                 // Resolve the HostObjAttributes type
                 HostObjAttributes hostType = ResolveHostType(doc);
@@ -53,6 +55,7 @@ namespace RevitMCPCommandSet.Services
                             if (hostType == null)
                                 throw new Exception("Duplicate returned null — the type may not support duplication.");
                             RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(dupTx.Commit());
+                            duplicatedTypeId = hostType.Id;
                         }
                         catch
                         {
@@ -127,9 +130,61 @@ namespace RevitMCPCommandSet.Services
                         }
                     }
 
+                    if (func != MaterialFunctionAssignment.Membrane && widthFeet <= 0)
+                        throw new Exception($"Layer {newLayers.Count + 1} ({func}) must have widthMm > 0; only Membrane layers may be 0.");
+
                     var newLayer = new CompoundStructureLayer(widthFeet, func, materialId);
                     newLayer.LayerCapFlag = layer.Wraps ?? false;
                     newLayers.Add(newLayer);
+                }
+
+                // Reusing the old structure with SetLayers kept its shell-layer counts and
+                // structural-material index, which no longer matched the new layer list and
+                // made Revit reject it. Build a fresh structure and define the core explicitly.
+                var newCs = CompoundStructure.CreateSimpleCompoundStructure(newLayers);
+                try
+                {
+                    newCs.EndCap = cs.EndCap;
+                    newCs.OpeningWrapping = cs.OpeningWrapping;
+                }
+                catch (Exception)
+                {
+                    // Wrapping settings are wall-only; other hosts keep the defaults.
+                }
+
+                // Core = from the first to the last Structure layer (or Substrate/StructuralDeck if
+                // there is no Structure layer); everything outside it becomes shell layers.
+                int coreFirst = newLayers.FindIndex(l => l.Function == MaterialFunctionAssignment.Structure);
+                int coreLast = newLayers.FindLastIndex(l => l.Function == MaterialFunctionAssignment.Structure);
+                if (coreFirst < 0)
+                {
+                    coreFirst = newLayers.FindIndex(l => l.Function == MaterialFunctionAssignment.Substrate
+                                                         || l.Function == MaterialFunctionAssignment.StructuralDeck);
+                    coreLast = newLayers.FindLastIndex(l => l.Function == MaterialFunctionAssignment.Substrate
+                                                            || l.Function == MaterialFunctionAssignment.StructuralDeck);
+                }
+                if (coreFirst < 0)
+                {
+                    coreFirst = 0;
+                    coreLast = newLayers.Count - 1;
+                }
+                newCs.SetNumberOfShellLayers(ShellLayerType.Exterior, coreFirst);
+                newCs.SetNumberOfShellLayers(ShellLayerType.Interior, newLayers.Count - 1 - coreLast);
+
+                int structuralIndex = newLayers.FindIndex(l => l.Function == MaterialFunctionAssignment.Structure);
+                newCs.StructuralMaterialIndex = structuralIndex >= 0 ? structuralIndex : coreFirst;
+
+                if (!newCs.IsValid(doc, out IDictionary<int, CompoundStructureError> layerErrors,
+                        out IDictionary<int, int> twoLayerErrors))
+                {
+                    var problems = new List<string>();
+                    foreach (var kv in layerErrors)
+                        problems.Add($"layer {kv.Key + 1} ({newLayers[kv.Key].Function}): {kv.Value}");
+                    foreach (var kv in twoLayerErrors)
+                        problems.Add($"layers {kv.Key + 1} and {kv.Value + 1} conflict");
+                    throw new Exception("CompoundStructure is not valid: " +
+                                        (problems.Count > 0 ? string.Join("; ", problems) : "unknown reason") +
+                                        $". Core was set to layers {coreFirst + 1}-{coreLast + 1}.");
                 }
 
                 // Apply inside a transaction
@@ -138,8 +193,7 @@ namespace RevitMCPCommandSet.Services
                     transaction.Start();
                     try
                     {
-                        cs.SetLayers(newLayers);
-                        hostType.SetCompoundStructure(cs);
+                        hostType.SetCompoundStructure(newCs);
                         RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
@@ -212,7 +266,28 @@ namespace RevitMCPCommandSet.Services
             }
             finally
             {
+                // Don't leave an orphan duplicated type behind when the change failed or was cancelled
+                if (duplicatedTypeId != null && Result != null && !Result.Success)
+                    DeleteDuplicatedType(doc, duplicatedTypeId);
                 _resetEvent.Set();
+            }
+        }
+
+        private void DeleteDuplicatedType(Document doc, ElementId typeId)
+        {
+            try
+            {
+                using (var tx = new Transaction(doc, "Delete Duplicated Type"))
+                {
+                    tx.Start();
+                    doc.Delete(typeId);
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
+                }
+                Result.Message += $" The duplicated type '{DuplicateAsName}' was deleted.";
+            }
+            catch (Exception ex)
+            {
+                Result.Message += $" The duplicated type '{DuplicateAsName}' could not be deleted: {ex.Message}";
             }
         }
 

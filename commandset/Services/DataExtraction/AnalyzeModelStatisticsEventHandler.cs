@@ -137,7 +137,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     levelStats.Add(new LevelStatistics
                     {
                         LevelName = level.Name,
-                        Elevation = level.Elevation,
+                        Elevation = Math.Round(level.Elevation * 304.8, 1),
                         ElementCount = elementCount
                     });
                 }

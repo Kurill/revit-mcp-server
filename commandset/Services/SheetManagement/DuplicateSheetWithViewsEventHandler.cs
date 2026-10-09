@@ -82,6 +82,14 @@ namespace RevitMCPCommandSet.Services.SheetManagement
 
                 var createdSheets = new List<object>();
 
+                // Sheet numbers must be unique; track every number in use (including ones we create)
+                var usedSheetNumbers = new HashSet<string>(
+                    new FilteredElementCollector(doc)
+                        .OfClass(typeof(ViewSheet))
+                        .Cast<ViewSheet>()
+                        .Select(s => s.SheetNumber),
+                    StringComparer.OrdinalIgnoreCase);
+
                 using (var tg = new TransactionGroup(doc, "Duplicate Sheet With Views"))
                 {
                     tg.Start();
@@ -91,6 +99,8 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                         using (var t = new Transaction(doc, $"Create Sheet Copy {i + 1}"))
                         {
                             t.Start();
+                            // Route Revit failures to us instead of a modal dialog
+                            var failures = RevitMCPCommandSet.Utils.RecordingFailuresPreprocessor.AttachTo(t);
                             try
                             {
                                 // Create new sheet with same title block type
@@ -103,9 +113,10 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                                     ? baseNumber
                                     : $"{NewSheetNumberPrefix}{baseNumber}";
                                 if (Copies > 1) newNumber += $"-{i + 1:D2}";
+                                newNumber = GetUniqueSheetNumber(newNumber, usedSheetNumbers);
 
-                                try { newSheet.SheetNumber = newNumber; }
-                                catch { newSheet.SheetNumber = $"{newNumber}_{Guid.NewGuid().ToString().Substring(0, 4)}"; }
+                                newSheet.SheetNumber = newNumber;
+                                usedSheetNumbers.Add(newNumber);
 
                                 newSheet.Name = sourceSheet.Name;
 
@@ -121,6 +132,10 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                                         foreach (Parameter srcParam in sourceTitleBlock.Parameters)
                                         {
                                             if (srcParam.IsReadOnly) continue;
+                                            // The title block exposes the owning sheet's number/name; copying
+                                            // them would set the source sheet number again (duplicate -> rollback).
+                                            var bip = (srcParam.Definition as InternalDefinition)?.BuiltInParameter;
+                                            if (bip == BuiltInParameter.SHEET_NUMBER || bip == BuiltInParameter.SHEET_NAME) continue;
                                             var destParam = newTitleBlock.LookupParameter(srcParam.Definition.Name);
                                             if (destParam == null || destParam.IsReadOnly) continue;
                                             try
@@ -254,7 +269,15 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                                     }
                                 }
 
-                                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
+                                var status = t.Commit();
+                                if (status != TransactionStatus.Committed)
+                                {
+                                    string reason = failures.Errors.Count > 0
+                                        ? string.Join("; ", failures.Errors)
+                                        : $"status: {status}";
+                                    throw new InvalidOperationException(
+                                        $"Revit rolled back sheet copy {i + 1} ({newNumber}): {reason}");
+                                }
 
                                 createdSheets.Add(new
                                 {
@@ -302,6 +325,17 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                 TaskCompleted = true;
                 _resetEvent.Set();
             }
+        }
+
+        /// <summary>
+        /// Returns candidate if no sheet uses it, otherwise candidate-2, candidate-3, ... (first free).
+        /// </summary>
+        private static string GetUniqueSheetNumber(string candidate, HashSet<string> usedNumbers)
+        {
+            if (!usedNumbers.Contains(candidate)) return candidate;
+            int n = 2;
+            while (usedNumbers.Contains($"{candidate}-{n}")) n++;
+            return $"{candidate}-{n}";
         }
 
         public string GetName() => "Duplicate Sheet With Views";

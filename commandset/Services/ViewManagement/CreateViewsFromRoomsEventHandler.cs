@@ -111,12 +111,29 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                                         createdView = CreateSectionForRoom(doc, room, bb, offsetFt, viewName);
                                         break;
                                     case "elevation":
-                                        createdView = CreateElevationsForRoom(doc, room, bb, offsetFt, viewName, createdViews, ref successCount);
-                                        // elevation creates 4 views, handled inside
+                                        // Elevation creates up to 4 views which are named and reported inside;
+                                        // only commit + report them here (no extra generic entry/rename).
+                                        var elevationEntries = new List<object>();
+                                        int elevationCount = 0;
+                                        var lastElevation = CreateElevationsForRoom(doc, room, bb, offsetFt, viewName, elevationEntries, ref elevationCount);
+                                        if (lastElevation != null)
+                                        {
+                                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
+                                            successCount += elevationCount;
+                                            createdViews.AddRange(elevationEntries);
+                                        }
+                                        else
+                                        {
+                                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
+                                        }
                                         break;
                                 }
 
-                                if (createdView != null)
+                                if (viewTypeName == "elevation")
+                                {
+                                    // Already committed/rolled back above
+                                }
+                                else if (createdView != null)
                                 {
                                     if (Scale > 0) createdView.Scale = Scale;
                                     ApplyDetailLevel(createdView);
@@ -143,7 +160,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                                         type = viewTypeName
                                     });
                                 }
-                                else if (viewTypeName != "elevation") // elevation handled inside
+                                else
                                 {
                                     RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                 }

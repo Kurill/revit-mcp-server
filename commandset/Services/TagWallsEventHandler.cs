@@ -113,9 +113,9 @@ namespace RevitMCPCommandSet.Services
                                         wallName = wall.Name,
                                         location = new
                                         {
-                                            x = midpoint.X,
-                                            y = midpoint.Y,
-                                            z = midpoint.Z
+                                            x = Math.Round(midpoint.X * 304.8, 1),
+                                            y = Math.Round(midpoint.Y * 304.8, 1),
+                                            z = Math.Round(midpoint.Z * 304.8, 1)
                                         }
                                     });
                                 }
@@ -156,9 +156,9 @@ try
                                         wallName = wall.Name,
                                         location = new
                                         {
-                                            x = midpoint.X,
-                                            y = midpoint.Y,
-                                            z = midpoint.Z
+                                            x = Math.Round(midpoint.X * 304.8, 1),
+                                            y = Math.Round(midpoint.Y * 304.8, 1),
+                                            z = Math.Round(midpoint.Z * 304.8, 1)
                                         }
                                     });
                                 }
@@ -179,6 +179,7 @@ try
                         totalWalls = walls.Count,
                         taggedWalls = createdTags.Count,
                         tags = createdTags,
+                        units = new { location = "mm" },
                         errors = errors.Count > 0 ? errors : null
                     };
                     }

@@ -23,7 +23,7 @@ export function registerMeasureBetweenElementsTool(server: McpServer) {
         .enum(["center_to_center", "closest_points", "bounding_box"])
         .optional()
         .default("center_to_center")
-        .describe("Measurement method (default: center_to_center)"),
+        .describe("Measurement method (default: center_to_center). closest_points = minimum distance between element solids (falls back to bounding_box if no solids); bounding_box = gap between axis-aligned bounding boxes (0 if overlapping). Response 'methodUsed' reports the method actually applied."),
     },
     async (args, extra) => {
       try {

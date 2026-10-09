@@ -113,31 +113,18 @@ namespace RevitMCPCommandSet.Services
             var definition = viewSchedule.Definition;
             int fieldCount = definition.GetFieldCount();
 
-            // Read column headers
-            var columnHeaders = new List<string>();
+            // Read the body as displayed. The column-header row(s) Revit renders inside the body section
+            // are returned as columnHeaders and excluded from rows; only visible (non-hidden) fields are columns.
+            var rows = RevitMCPCommandSet.Utils.ScheduleFieldResolver.ReadBody(
+                viewSchedule, MaxRows, out var columnHeaders, out int totalRows);
+            int rowsToRead = rows.Count;
+
+            var fieldNames = new List<string>();
             for (int i = 0; i < fieldCount; i++)
             {
                 var field = definition.GetField(i);
-                columnHeaders.Add(field.GetName());
-            }
-
-            // Read cell data from the body section
-            TableData tableData = viewSchedule.GetTableData();
-            TableSectionData bodyData = tableData.GetSectionData(SectionType.Body);
-            int totalRows = bodyData.NumberOfRows;
-            int totalCols = bodyData.NumberOfColumns;
-
-            int rowsToRead = Math.Min(totalRows, MaxRows);
-            var rows = new List<List<string>>();
-            for (int row = 0; row < rowsToRead; row++)
-            {
-                var rowData = new List<string>();
-                for (int col = 0; col < totalCols; col++)
-                {
-                    string cellText = bodyData.GetCellText(row, col);
-                    rowData.Add(cellText);
-                }
-                rows.Add(rowData);
+                if (!field.IsHidden)
+                    fieldNames.Add(field.GetName());
             }
 
             // List available schedulable fields
@@ -163,6 +150,7 @@ namespace RevitMCPCommandSet.Services
             {
                 ["scheduleName"] = viewSchedule.Name,
                 ["columnHeaders"] = columnHeaders,
+                ["fieldNames"] = fieldNames,
                 ["rows"] = rows,
                 ["fieldCount"] = fieldCount,
                 ["rowCount"] = totalRows,

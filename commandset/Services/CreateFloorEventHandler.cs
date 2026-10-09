@@ -132,13 +132,10 @@ namespace RevitMCPCommandSet.Services
                 if (room?.Level != null) return room.Level;
             }
 
-            if (LevelElevation != 0)
-            {
-                double elevFeet = LevelElevation / 304.8;
-                return levels.OrderBy(l => Math.Abs(l.Elevation - elevFeet)).FirstOrDefault();
-            }
-
-            return levels.FirstOrDefault();
+            // Pick the level whose elevation is closest to the requested one (exact match wins).
+            // Note: 0 is a valid requested elevation, so it must not fall back to the lowest level.
+            double elevFeet = LevelElevation / 304.8;
+            return levels.OrderBy(l => Math.Abs(l.Elevation - elevFeet)).FirstOrDefault();
         }
 
         private CurveLoop GetBoundary(Document doc)
