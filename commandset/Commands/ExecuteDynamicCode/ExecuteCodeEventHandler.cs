@@ -52,7 +52,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                 var doc = app.ActiveUIDocument.Document;
                 ResultInfo = new ExecutionResultInfo();
 
-                if (!ConfirmRun(_generatedCode, _transactionMode))
+                if (ConfirmationRequired() && !ConfirmRun(_generatedCode, _transactionMode))
                 {
                     ResultInfo.Success = false;
                     ResultInfo.ErrorMessage = "Execution cancelled by the user.";
@@ -100,6 +100,21 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
             {
                 TaskCompleted = true;
                 _resetEvent.Set();
+            }
+        }
+
+        // A user environment variable survives reinstalls and auto-updates, which rewrite
+        // commandRegistry.json. It is read from the registry on every run, so changing it
+        // needs no Revit restart.
+        private static bool ConfirmationRequired()
+        {
+            try
+            {
+                return Environment.GetEnvironmentVariable("REVIT_MCP_CONFIRM_CODE", EnvironmentVariableTarget.User) != "0";
+            }
+            catch
+            {
+                return true;
             }
         }
 
