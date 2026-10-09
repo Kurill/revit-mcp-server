@@ -18,7 +18,6 @@ namespace revit_mcp_plugin.UI
         private string _apiKey;
         private const string ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
         private string _model = "claude-sonnet-4-6";
-        private const int MCP_PORT = 8080;
         private CancellationTokenSource _cts;
 
         public void Cancel()
@@ -29,7 +28,8 @@ namespace revit_mcp_plugin.UI
         private const string SYSTEM_PROMPT = @"You are Claude, an AI assistant integrated directly into Autodesk Revit. You have access to tools that execute commands on the active Revit model in real time.
 
 BEHAVIOR:
-- Manage the model directly. When the user asks for something, EXECUTE the action with the available tools. Do not ask for unnecessary confirmations.
+- Manage the model directly. When the user asks for something, EXECUTE the action with the available tools.
+- Before deleting, clearing or changing many elements, call the tool with dryRun=true first and show the user what would change. Destructive tools also ask the user in a Revit dialog; if the user declines, do not retry.
 - For simple tasks (info, reading, single operation): execute immediately.
 - For complex tasks (multi-step, creating multiple elements, workflows): mentally plan the steps, then execute them one after another.
 - Use reading tools (get_project_info, get_available_family_types, ai_element_filter, get_selected_elements) to discover what is in the model before acting.
@@ -40,6 +40,13 @@ RULES:
 - Revit parameter and category names are localized (e.g. 'Muri' in Italian, 'Walls' in English). Use BuiltInCategory (OST_Walls, OST_Doors, etc.) for categories when possible.
 - Coordinates in millimeters (mm).
 - Reply in the user's language, be concise.";
+
+        private static bool StartsWithUserText(List<JObject> history)
+        {
+            if (history.Count == 0) return true;
+            var first = history[0];
+            return (string)first["role"] == "user" && first["content"]?.Type == JTokenType.String;
+        }
 
         public string Model
         {
@@ -81,14 +88,10 @@ RULES:
 
             _conversationHistory.Add(new JObject { ["role"] = "user", ["content"] = userMessage });
 
-            // Trim history in pairs to avoid orphaning tool_use/tool_result blocks.
-            while (_conversationHistory.Count > 30)
-            {
-                // Always remove at least 2 messages (user+assistant pair).
+            // The API rejects a history that starts with an assistant turn or with a
+            // tool_result whose tool_use was trimmed, so cut only at a plain user message.
+            while (_conversationHistory.Count > 30 || !StartsWithUserText(_conversationHistory))
                 _conversationHistory.RemoveAt(0);
-                if (_conversationHistory.Count > 0)
-                    _conversationHistory.RemoveAt(0);
-            }
 
             _cts?.Dispose();
             _cts = new CancellationTokenSource();
@@ -293,7 +296,10 @@ RULES:
                 using (var client = new TcpClient())
                 {
                     // Connect with timeout
-                    var connectTask = client.ConnectAsync("127.0.0.1", MCP_PORT);
+                    int port = Core.SocketService.Instance.Port;
+                    if (port == 0)
+                        return "MCP command failed: the Revit MCP server is not running (use the MCP switch).";
+                    var connectTask = client.ConnectAsync("127.0.0.1", port);
                     if (await Task.WhenAny(connectTask, Task.Delay(10000)) != connectTask)
                         return "MCP command failed: Connection timeout (server not responding)";
                     await connectTask; // propagate any connection exception
@@ -309,11 +315,18 @@ RULES:
                     var responseBuilder = new StringBuilder();
                     int bytesRead;
 
-                    client.ReceiveTimeout = 120000;
+                    var deadline = Task.Delay(130000, _cts?.Token ?? CancellationToken.None);
 
                     while (true)
                     {
-                        bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        // ReceiveTimeout does not apply to ReadAsync; a command stuck behind a
+                        // modal dialog would otherwise hang the chat until Revit is closed.
+                        var readTask = stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (await Task.WhenAny(readTask, deadline) != readTask)
+                            return _cts?.IsCancellationRequested == true
+                                ? "MCP command cancelled by the user."
+                                : "MCP command timed out after 130 s; it may still finish in Revit. Check the model before retrying.";
+                        bytesRead = await readTask;
                         if (bytesRead == 0) break;
                         responseBuilder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
 
