@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Helpers;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using RevitMCPCommandSet.Models.Common;
@@ -132,6 +133,11 @@ namespace RevitMCPCommandSet.Services
             if (ElementIds.Count > 0)
             {
                 idsToDelete = ElementIds.Select(id => ToElementId(id)).ToList();
+                var notCad = idsToDelete.Where(id => !(doc.GetElement(id) is ImportInstance || doc.GetElement(id) is CADLinkType)).ToList();
+                if (notCad.Count > 0)
+                    throw new ArgumentException(
+                        $"Refusing to delete: {notCad.Count} of the given ids are not CAD imports, links or link types " +
+                        $"(first: {notCad[0]}).");
             }
             else
             {
@@ -154,6 +160,9 @@ namespace RevitMCPCommandSet.Services
                 Result = new AIResult<object> { Success = true, Message = "No CAD elements to delete" };
                 return;
             }
+
+            if (!ConfirmationHelper.Confirm("delete CAD imports/links:", idsToDelete.Count))
+                throw new OperationCanceledException("Deletion cancelled by the user.");
 
             int deletedCount;
             using (var transaction = new Transaction(doc, "Delete CAD Elements"))

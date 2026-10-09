@@ -32,7 +32,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
                     _handler.FindText = parameters?["findText"]?.Value<string>() ?? "";
                     _handler.ReplaceText = parameters?["replaceText"]?.Value<string>() ?? "";
                     _handler.OnlyEmpty = parameters?["onlyEmpty"]?.Value<bool>() ?? false;
-                    _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? false;
+                    _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? true;
 
                     _handler.SetParameters();
 

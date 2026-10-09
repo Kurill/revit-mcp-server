@@ -5,6 +5,8 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using ClosedXML.Excel;
+using RevitMCPCommandSet.Helpers;
+using RevitMCPCommandSet.Utils;
 using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
@@ -16,7 +18,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
         public string FilePath { get; set; } = "";
         public string SheetName { get; set; } = "";
-        public bool DryRun { get; set; } = false;
+        public bool DryRun { get; set; } = true;
         public object Result { get; private set; }
 
         public void SetParameters(string filePath, string sheetName, bool dryRun)
@@ -70,80 +72,101 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                         return;
                     }
 
-                    // Read data rows
                     int lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
-                    int updated = 0;
                     int skipped = 0;
-                    int failed = 0;
-                    var errors = new List<string>();
+                    var changes = new List<(Element Element, Parameter Param, string OldValue, string NewValue)>();
 
-                    using (var tx = DryRun ? null : new Transaction(doc, "Import from Excel"))
+                    for (int r = 2; r <= lastRow; r++)
                     {
-                        tx?.Start();
-
-                        for (int r = 2; r <= lastRow; r++)
-                        {
-                            string idStr = worksheet.Cell(r, idCol).GetString().Trim();
-                            if (string.IsNullOrEmpty(idStr)) { skipped++; continue; }
-
-                            if (!long.TryParse(idStr, out long idVal)) { skipped++; continue; }
+                        string idStr = worksheet.Cell(r, idCol).GetString().Trim();
+                        if (!long.TryParse(idStr, out long idVal)) { skipped++; continue; }
 
 #if REVIT2024_OR_GREATER
-                            var elemId = new ElementId(idVal);
+                        var elemId = new ElementId(idVal);
 #else
-                            var elemId = new ElementId((int)idVal);
+                        var elemId = new ElementId((int)idVal);
 #endif
-                            var elem = doc.GetElement(elemId);
-                            if (elem == null) { skipped++; continue; }
+                        var elem = doc.GetElement(elemId);
+                        if (elem == null) { skipped++; continue; }
 
-                            bool anySet = false;
-                            foreach (var kvp in headers)
-                            {
-                                if (kvp.Key == idCol) continue;
-                                string paramName = kvp.Value;
-                                if (paramName == "Category" || paramName == "Family" || paramName == "Type") continue;
+                        foreach (var kvp in headers)
+                        {
+                            if (kvp.Key == idCol) continue;
+                            string paramName = kvp.Value;
+                            if (paramName == "Category" || paramName == "Family" || paramName == "Type") continue;
 
-                                string cellValue = worksheet.Cell(r, kvp.Key).GetString().Trim();
-                                var param = elem.LookupParameter(paramName);
-                                if (param == null || param.IsReadOnly) continue;
+                            var param = elem.LookupParameter(paramName);
+                            if (param == null || param.IsReadOnly) continue;
 
-                                if (!DryRun)
-                                {
-                                    try
-                                    {
-                                        bool setOk = SetParameterValue(param, cellValue);
-                                        if (setOk) anySet = true;
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        errors.Add($"Row {r}, param '{paramName}': {ex.Message}");
-                                        failed++;
-                                    }
-                                }
-                                else
-                                {
-                                    anySet = true; // dry run counts as success
-                                }
-                            }
+                            string cellValue = worksheet.Cell(r, kvp.Key).GetString().Trim();
+                            string current = DisplayValueParameters.Read(param);
+                            // Only cells the user actually edited; rewriting every exported
+                            // value would round each one through display precision.
+                            if (string.IsNullOrEmpty(cellValue) || cellValue == current) continue;
 
-                            if (anySet) updated++;
+                            changes.Add((elem, param, current, cellValue));
+                        }
+                    }
+
+                    var preview = changes.Take(50).Select(c => new
+                    {
+                        elementId = c.Element.Id.ToString(),
+                        parameter = c.Param.Definition.Name,
+                        from = c.OldValue,
+                        to = c.NewValue
+                    }).ToList();
+                    int elementCount = changes.Select(c => c.Element.Id).Distinct().Count();
+
+                    if (DryRun || changes.Count == 0)
+                    {
+                        Result = new
+                        {
+                            success = true,
+                            dryRun = DryRun,
+                            totalRows = lastRow - 1,
+                            elementsToUpdate = elementCount,
+                            valuesToChange = changes.Count,
+                            skippedRows = skipped,
+                            changes = preview,
+                            message = $"{changes.Count} value(s) on {elementCount} element(s) differ from the model" +
+                                      (DryRun ? ". Nothing was written (dryRun=true)." : "; nothing to write.")
+                        };
+                        return;
+                    }
+
+                    if (!ConfirmationHelper.Confirm($"import {changes.Count} parameter value(s) from Excel into", elementCount))
+                    {
+                        Result = new { success = false, error = "Import cancelled by the user." };
+                        return;
+                    }
+
+                    var errors = new List<string>();
+                    using (var tx = new Transaction(doc, "Import from Excel"))
+                    {
+                        tx.Start();
+                        foreach (var c in changes)
+                        {
+                            string error = DisplayValueParameters.Write(c.Param, c.NewValue);
+                            if (error != null)
+                                errors.Add($"Element {c.Element.Id}, '{c.Param.Definition.Name}': {error}");
                         }
 
-                        tx?.Commit();
+                        if (tx.Commit() != TransactionStatus.Committed)
+                        {
+                            Result = new { success = false, error = "Revit rolled the import back.", errors = errors.Take(20).ToList() };
+                            return;
+                        }
                     }
 
                     Result = new
                     {
-                        success = true,
-                        dryRun = DryRun,
-                        totalRows = lastRow - 1,
-                        updated,
-                        skipped,
-                        failed,
-                        errors = errors.Take(20).ToList(),
-                        message = DryRun
-                            ? $"Dry run: {updated} elements would be updated, {skipped} skipped"
-                            : $"Updated {updated} elements, {skipped} skipped, {failed} errors"
+                        success = errors.Count == 0,
+                        dryRun = false,
+                        valuesWritten = changes.Count - errors.Count,
+                        failed = errors.Count,
+                        elementsUpdated = elementCount,
+                        skippedRows = skipped,
+                        errors = errors.Take(20).ToList()
                     };
                 }
             }
@@ -154,31 +177,6 @@ namespace RevitMCPCommandSet.Services.DataExtraction
             finally
             {
                 _resetEvent.Set();
-            }
-        }
-
-        private bool SetParameterValue(Parameter param, string value)
-        {
-            if (string.IsNullOrEmpty(value)) return false;
-
-            switch (param.StorageType)
-            {
-                case StorageType.String:
-                    param.Set(value);
-                    return true;
-                case StorageType.Integer:
-                    if (int.TryParse(value, out int intVal)) { param.Set(intVal); return true; }
-                    return false;
-                case StorageType.Double:
-                    if (double.TryParse(value, System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out double dblVal))
-                    {
-                        param.Set(dblVal);
-                        return true;
-                    }
-                    return false;
-                default:
-                    return false;
             }
         }
 

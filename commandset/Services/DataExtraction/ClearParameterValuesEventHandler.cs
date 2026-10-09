@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Helpers;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using RevitMCPCommandSet.Models.Common;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public string Scope { get; set; } = "whole_model";
         public string FilterValue { get; set; } = "";
         public string ParameterType { get; set; } = "instance";
-        public bool DryRun { get; set; } = false;
+        public bool DryRun { get; set; } = true;
 
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
@@ -36,6 +37,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
                 if (string.IsNullOrEmpty(ParameterName))
                     throw new ArgumentException("parameterName is required");
+                if (Scope.ToLower() != "active_view" && Scope.ToLower() != "selection" && Categories.Count == 0)
+                    throw new ArgumentException("Clearing across the whole model requires at least one category in 'categories'.");
 
                 // Collect elements based on scope
                 FilteredElementCollector collector;
@@ -85,6 +88,13 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 int errors = 0;
                 var preview = new List<object>();
 
+                if (!DryRun)
+                {
+                    int candidates = elements.Count(e => IsCandidate(e));
+                    if (!ConfirmationHelper.Confirm($"clear '{ParameterName}' on", candidates))
+                        throw new OperationCanceledException("Clearing cancelled by the user.");
+                }
+
                 using (var transaction = DryRun ? null : new Transaction(doc, "Clear Parameter Values"))
                 {
                     if (!DryRun) transaction.Start();
@@ -92,36 +102,19 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     {
                         foreach (var elem in elements)
                         {
-                            Parameter param;
-                            if (ParameterType == "type")
-                            {
-                                var typeElem = doc.GetElement(elem.GetTypeId());
-                                param = typeElem?.LookupParameter(ParameterName);
-                            }
-                            else
-                            {
-                                param = elem.LookupParameter(ParameterName);
-                            }
-
-                            if (param == null || param.IsReadOnly)
+                            if (!IsCandidate(elem))
                             {
                                 skipped++;
                                 continue;
                             }
-
-                            string currentValue = param.AsValueString() ?? param.AsString() ?? "";
-
-                            if (!string.IsNullOrEmpty(FilterValue) && !currentValue.Contains(FilterValue))
-                            {
-                                skipped++;
-                                continue;
-                            }
+                            var param = elem.LookupParameter(ParameterName);
+                            string currentValue = DisplayValueParameters.Read(param);
 
                             try
                             {
                                 if (DryRun)
                                 {
-                                    preview.Add(new
+                                    if (preview.Count < 50) preview.Add(new
                                     {
 #if REVIT2024_OR_GREATER
                                         elementId = elem.Id.Value,
@@ -159,7 +152,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                             }
                         }
 
-                        if (!DryRun) transaction.Commit();
+                        if (!DryRun && transaction.Commit() != TransactionStatus.Committed)
+                            throw new InvalidOperationException("Revit rolled the change back.");
                     }
                     catch
                     {
@@ -197,6 +191,17 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 TaskCompleted = true;
                 _resetEvent.Set();
             }
+        }
+
+        // ParameterType "type" collects element types, so the parameter is read from
+        // the element itself in both modes.
+        private bool IsCandidate(Element elem)
+        {
+            var param = elem.LookupParameter(ParameterName);
+            if (param == null || param.IsReadOnly || !param.HasValue) return false;
+            string currentValue = DisplayValueParameters.Read(param);
+            if (string.IsNullOrEmpty(currentValue)) return false;
+            return string.IsNullOrEmpty(FilterValue) || currentValue.Contains(FilterValue);
         }
 
         public string GetName() => "Clear Parameter Values";

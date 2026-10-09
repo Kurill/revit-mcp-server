@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using RevitMCPSDK.API.Interfaces;
+using RevitMCPCommandSet.Helpers;
 using RevitMCPCommandSet.Models.Common;
 using System;
 using System.Collections.Generic;
@@ -247,6 +248,8 @@ namespace RevitMCPCommandSet.Services
 
                 case ElementOperationType.Delete:
                     // Delete elements (requires transaction)
+                    if (!ConfirmationHelper.Confirm("delete", elementIds.Count))
+                        throw new OperationCanceledException("Deletion cancelled by the user.");
                     using (Transaction trans = new Transaction(doc, "Delete Elements"))
                     {
                         trans.Start();

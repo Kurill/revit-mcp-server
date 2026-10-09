@@ -22,7 +22,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
                 _handler.SetParameters(
                     filePath: parameters?["filePath"]?.ToString() ?? "",
                     sheetName: parameters?["sheetName"]?.ToString() ?? "",
-                    dryRun: parameters?["dryRun"]?.Value<bool>() ?? false
+                    dryRun: parameters?["dryRun"]?.Value<bool>() ?? true
                 );
 
                 if (RaiseAndWaitForCompletion(120000))

@@ -1,4 +1,3 @@
-using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Utils;
@@ -12,7 +11,7 @@ namespace RevitMCPCommandSet.Commands.Base
     /// handler's completion event, so without this a second call returns at once with
     /// the previous call's result while Revit runs the new one later.
     /// </summary>
-    public abstract class GuardedCommandBase : GuardedCommandBase
+    public abstract class GuardedCommandBase : ExternalEventCommandBase
     {
         private readonly object _callLock = new object();
         private bool _previousCallTimedOut;
