@@ -25,6 +25,8 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
                 {
                     _handler.IncludeUnused = parameters?["includeUnused"]?.Value<bool>() ?? true;
                     _handler.CategoryFilter = parameters?["categoryFilter"]?.Value<string>() ?? "";
+                    var limit = parameters?["limit"]?.Value<int?>() ?? 50;
+                    _handler.Limit = limit > 0 ? limit : 50;
 
                     _handler.SetParameters();
 

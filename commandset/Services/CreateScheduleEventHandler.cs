@@ -38,7 +38,7 @@ namespace RevitMCPCommandSet.Services
                     transaction.Start();
                     try
                     {
-                        var categoryId = ResolveCategoryId();
+                        var categoryId = ResolveCategoryId(doc);
                         ViewSchedule schedule;
 
                         var normalizedType = scheduleType.ToLowerInvariant().Replace("_", "").Replace(" ", "");
@@ -97,10 +97,12 @@ namespace RevitMCPCommandSet.Services
                         ApplyPreset(schedule);
 
                         // Add fields
-                        var addedFields = AddFields(schedule);
+                        var missingFields = new List<string>();
+                        var addedFields = AddFields(schedule, missingFields);
 
                         // Add filters
-                        AddFilters(schedule, addedFields);
+                        var notes = new List<string>();
+                        AddFilters(schedule, addedFields, notes);
 
                         // Add sort/group fields
                         AddSortFields(schedule, addedFields);
@@ -113,10 +115,14 @@ namespace RevitMCPCommandSet.Services
 
                         RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
+                        var message = $"Successfully created {scheduleType} schedule '{schedule.Name}'";
+                        if (missingFields.Count > 0)
+                            message += $". WARNING: {missingFields.Count} field(s) could not be added (no matching schedulable field): {string.Join(", ", missingFields)}";
+
                         Result = new AIResult<object>
                         {
                             Success = true,
-                            Message = $"Successfully created {scheduleType} schedule '{schedule.Name}'",
+                            Message = message,
                             Response = new
                             {
 #if REVIT2024_OR_GREATER
@@ -124,7 +130,10 @@ namespace RevitMCPCommandSet.Services
 #else
                                 scheduleId = schedule.Id.IntegerValue,
 #endif
-                                name = schedule.Name
+                                name = schedule.Name,
+                                addedFields = addedFields.Keys.ToList(),
+                                missingFields,
+                                notes
                             }
                         };
                     }
@@ -150,12 +159,15 @@ namespace RevitMCPCommandSet.Services
             }
         }
 
-        private ElementId ResolveCategoryId()
+        private ElementId ResolveCategoryId(Document doc)
         {
             if (!string.IsNullOrEmpty(ScheduleInfo.CategoryName))
             {
-                var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), ScheduleInfo.CategoryName);
-                return new ElementId(bic);
+                // Accepts OST_ names, English names ("Doors") and localized names ("Двери")
+                var catId = CategoryResolver.ResolveToId(doc, ScheduleInfo.CategoryName);
+                if (catId == null)
+                    throw new ArgumentException($"Category '{ScheduleInfo.CategoryName}' could not be resolved");
+                return catId;
             }
 
             if (ScheduleInfo.CategoryId > 0)
@@ -307,7 +319,7 @@ namespace RevitMCPCommandSet.Services
             }
         }
 
-        private Dictionary<string, ScheduleFieldId> AddFields(ViewSchedule schedule)
+        private Dictionary<string, ScheduleFieldId> AddFields(ViewSchedule schedule, List<string> missingFields)
         {
             var addedFields = new Dictionary<string, ScheduleFieldId>(StringComparer.OrdinalIgnoreCase);
             var schedulableFields = schedule.Definition.GetSchedulableFields();
@@ -317,14 +329,18 @@ namespace RevitMCPCommandSet.Services
 
             foreach (var fieldInfo in ScheduleInfo.Fields)
             {
-                var matchingField = schedulableFields.FirstOrDefault(sf =>
-                {
-                    var name = sf.GetName(schedule.Document);
-                    return name.Equals(fieldInfo.ParameterName, StringComparison.OrdinalIgnoreCase);
-                });
+                // Resolve by explicit parameter id, then BuiltInParameter alias (language-independent), then display name
+                SchedulableField matchingField = null;
+                if (fieldInfo.ParameterId != 0)
+                    matchingField = schedulableFields.FirstOrDefault(sf => sf.ParameterId.GetValue() == fieldInfo.ParameterId);
+                if (matchingField == null)
+                    matchingField = ScheduleFieldResolver.FindSchedulableField(schedule.Document, schedulableFields, fieldInfo.ParameterName);
 
                 if (matchingField == null)
+                {
+                    missingFields?.Add(string.IsNullOrEmpty(fieldInfo.ParameterName) ? $"parameterId {fieldInfo.ParameterId}" : fieldInfo.ParameterName);
                     continue;
+                }
 
                 var addedField = schedule.Definition.AddField(matchingField);
                 addedFields[fieldInfo.ParameterName] = addedField.FieldId;
@@ -360,31 +376,29 @@ namespace RevitMCPCommandSet.Services
             return addedFields;
         }
 
-        private void AddFilters(ViewSchedule schedule, Dictionary<string, ScheduleFieldId> addedFields)
+        private void AddFilters(ViewSchedule schedule, Dictionary<string, ScheduleFieldId> addedFields, List<string> notes)
         {
             if (ScheduleInfo.Filters == null || ScheduleInfo.Filters.Count == 0)
                 return;
 
+            var definition = schedule.Definition;
             foreach (var filterInfo in ScheduleInfo.Filters)
             {
-                ScheduleFieldId fieldId = null;
-
+                ScheduleField field;
                 if (!string.IsNullOrEmpty(filterInfo.FieldName) &&
                     addedFields.TryGetValue(filterInfo.FieldName, out var resolvedFieldId))
                 {
-                    fieldId = resolvedFieldId;
+                    field = definition.GetField(resolvedFieldId);
                 }
-                else if (filterInfo.FieldIndex >= 0 && filterInfo.FieldIndex < schedule.Definition.GetFieldCount())
+                else
                 {
-                    fieldId = schedule.Definition.GetField(filterInfo.FieldIndex).FieldId;
+                    // Prefers fields already in the schedule; throws a descriptive error if nothing matches
+                    field = ScheduleFieldResolver.ResolveFieldForFilter(schedule, filterInfo.FieldName, filterInfo.FieldIndex, notes);
                 }
 
-                if (fieldId == null)
-                    continue;
-
-                var filterType = (ScheduleFilterType)Enum.Parse(typeof(ScheduleFilterType), filterInfo.FilterType, true);
-                var filter = new ScheduleFilter(fieldId, filterType, filterInfo.FilterValue);
-                schedule.Definition.AddFilter(filter);
+                // Validates the filter type against the field and converts the value to the field's storage type
+                var filter = ScheduleFieldResolver.BuildFilter(schedule, field, filterInfo.FilterType, filterInfo.FilterValue);
+                definition.AddFilter(filter);
             }
         }
 
@@ -401,6 +415,11 @@ namespace RevitMCPCommandSet.Services
                     addedFields.TryGetValue(sortInfo.FieldName, out var resolvedFieldId))
                 {
                     fieldId = resolvedFieldId;
+                }
+                else if (!string.IsNullOrEmpty(sortInfo.FieldName) &&
+                         ScheduleFieldResolver.FindExistingField(schedule.Definition, sortInfo.FieldName) is ScheduleField existingSort)
+                {
+                    fieldId = existingSort.FieldId;
                 }
                 else if (sortInfo.FieldIndex >= 0 && sortInfo.FieldIndex < schedule.Definition.GetFieldCount())
                 {
@@ -435,6 +454,11 @@ namespace RevitMCPCommandSet.Services
                     addedFields.TryGetValue(groupInfo.FieldName, out var resolvedFieldId))
                 {
                     fieldId = resolvedFieldId;
+                }
+                else if (!string.IsNullOrEmpty(groupInfo.FieldName) &&
+                         ScheduleFieldResolver.FindExistingField(schedule.Definition, groupInfo.FieldName) is ScheduleField existingGroup)
+                {
+                    fieldId = existingGroup.FieldId;
                 }
                 else if (groupInfo.FieldIndex >= 0 && groupInfo.FieldIndex < schedule.Definition.GetFieldCount())
                 {

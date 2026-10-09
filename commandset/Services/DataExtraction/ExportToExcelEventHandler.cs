@@ -67,21 +67,29 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     .WhereElementIsNotElementType();
 
                 var elements = new List<Element>();
+                var unresolvedCategories = new List<string>();
                 if (Categories.Count > 0)
                 {
                     foreach (var cat in Categories)
                     {
-                        var builtInCat = GetBuiltInCategory(doc, cat);
-                        if (builtInCat != BuiltInCategory.INVALID)
+                        // Language-independent: OST_ names, English names ("Doors") and localized names ("Двери")
+                        var catId = CategoryResolver.ResolveToId(doc, cat);
+                        if (catId == null)
                         {
-                            var catElements = new FilteredElementCollector(doc)
-                                .OfCategory(builtInCat)
-                                .WhereElementIsNotElementType()
-                                .Take(MaxElements)
-                                .ToList();
-                            elements.AddRange(catElements);
+                            unresolvedCategories.Add(cat);
+                            continue;
                         }
+
+                        var catElements = new FilteredElementCollector(doc)
+                            .OfCategoryId(catId)
+                            .WhereElementIsNotElementType()
+                            .Take(MaxElements)
+                            .ToList();
+                        elements.AddRange(catElements);
                     }
+
+                    // Remove duplicates in case several names resolved to the same category
+                    elements = elements.GroupBy(e => e.Id).Select(g => g.First()).ToList();
                 }
                 else
                 {
@@ -90,7 +98,9 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
                 if (elements.Count == 0)
                 {
-                    Result = new { success = true, filePath = FilePath, elementCount = 0, message = "No elements found" };
+                    Result = unresolvedCategories.Count > 0
+                        ? (object)new { success = false, error = $"Could not resolve categories: {string.Join(", ", unresolvedCategories)}. Use BuiltInCategory names (e.g. OST_Doors), English names (Doors) or the localized category name." }
+                        : new { success = true, filePath = FilePath, elementCount = 0, message = "No elements found" };
                     return;
                 }
 
@@ -201,7 +211,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     filePath = FilePath,
                     elementCount = elements.Count,
                     parameterCount = paramInfos.Count,
-                    sheetName = SheetName
+                    sheetName = SheetName,
+                    unresolvedCategories
                 };
             }
             catch (Exception ex)
@@ -255,20 +266,6 @@ namespace RevitMCPCommandSet.Services.DataExtraction
             }
 
             return result.Values.OrderBy(p => p.IsType).ThenBy(p => p.Name).ToList();
-        }
-
-        private BuiltInCategory GetBuiltInCategory(Document doc, string categoryName)
-        {
-            foreach (Category cat in doc.Settings.Categories)
-            {
-                if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
-#if REVIT2024_OR_GREATER
-                    return (BuiltInCategory)cat.Id.Value;
-#else
-                    return (BuiltInCategory)cat.Id.IntegerValue;
-#endif
-            }
-            return BuiltInCategory.INVALID;
         }
 
         public string GetName() => "Export To Excel";

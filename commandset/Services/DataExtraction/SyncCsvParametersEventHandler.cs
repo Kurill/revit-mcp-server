@@ -188,7 +188,9 @@ namespace RevitMCPCommandSet.Services.DataExtraction
             {
                 case StorageType.String: return param.AsString() ?? "";
                 case StorageType.Integer: return param.AsInteger().ToString();
-                case StorageType.Double: return param.AsDouble().ToString("F6");
+                // Raw AsDouble is in internal units (feet); show it the way Revit displays it, e.g. "3000 mm"
+                case StorageType.Double:
+                    return param.AsValueString() ?? param.AsDouble().ToString("F6");
                 case StorageType.ElementId: return param.AsElementId().GetValue().ToString();
                 default: return "";
             }

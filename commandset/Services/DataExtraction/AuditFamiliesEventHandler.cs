@@ -14,6 +14,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
     {
         public bool IncludeUnused { get; set; } = true;
         public string CategoryFilter { get; set; } = "";
+        public int Limit { get; set; } = 50;
+        private const int MaxTypesPerFamily = 25;
 
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
@@ -192,9 +194,12 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                         },
                         recommendations,
                         categoryBreakdown,
+                        familyCount = Math.Min(familyDetails.Count, Limit),
+                        totalCount = familyDetails.Count,
+                        truncated = familyDetails.Count > Limit,
                         families = familyDetails
                             .OrderByDescending(f => f.InstanceCount)
-                            .Take(100)
+                            .Take(Limit)
                             .Select(f => new
                             {
                                 f.FamilyId,
@@ -205,7 +210,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                                 f.InstanceCount,
                                 f.TypeCount,
                                 f.IsUnused,
-                                f.Types
+                                // typeCount has the full number; the list is capped to keep the response small
+                                Types = f.Types.Take(MaxTypesPerFamily).ToList()
                             })
                             .ToList()
                     }

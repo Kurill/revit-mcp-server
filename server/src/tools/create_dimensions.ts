@@ -33,12 +33,14 @@ export function registerCreateDimensionsTool(server: McpServer) {
                 z: z.number().describe("Z coordinate in mm"),
               })
               .optional()
-              .describe("Location of the dimension line itself (mm)."),
+              .describe(
+                "A point the dimension line passes through (mm). The line stays parallel to startPoint→endPoint and is shifted sideways to this point, e.g. to place it outside furniture. Default: through startPoint/endPoint."
+              ),
             elementIds: z
               .array(z.number())
               .optional()
               .describe(
-                "Element IDs to dimension between. With 3+ IDs a single chained dimension is created."
+                "Element IDs to dimension between. With 3+ IDs a single chained dimension is created. With 1 ID the element is measured across itself (the face/reference plane nearest startPoint and the one nearest endPoint). Family instances use symbol-geometry faces, or the family's reference planes (Left/Right/Front/Back...) when they have no planar faces."
               ),
             wallFace: z
               .enum(["nearest", "interior", "exterior"])

@@ -171,11 +171,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
             foreach (var fieldName in FieldNames)
             {
-                var matchingField = schedulableFields.FirstOrDefault(sf =>
-                {
-                    var name = sf.GetName(schedule.Document);
-                    return name.Equals(fieldName, StringComparison.OrdinalIgnoreCase);
-                });
+                // BuiltInParameter alias (language-independent) first, then display name
+                var matchingField = ScheduleFieldResolver.FindSchedulableField(schedule.Document, schedulableFields, fieldName);
 
                 if (matchingField != null)
                 {
@@ -187,6 +184,9 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     notFound.Add(fieldName);
                 }
             }
+
+            if (added.Count == 0)
+                throw new ArgumentException($"None of the requested fields could be added (no matching schedulable field): {string.Join(", ", notFound)}");
 
             var result = $"Added {added.Count} field(s): {string.Join(", ", added)}";
             if (notFound.Count > 0)
@@ -201,25 +201,19 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
             var removed = new List<string>();
             var notFound = new List<string>();
-            var fieldCount = def.GetFieldCount();
-
             foreach (var fieldName in FieldNames)
             {
-                bool found = false;
-                for (int i = fieldCount - 1; i >= 0; i--)
+                // Name, column heading, or BuiltInParameter alias (language-independent)
+                var field = ScheduleFieldResolver.FindExistingField(def, fieldName);
+                if (field != null)
                 {
-                    var field = def.GetField(i);
-                    if (field.GetName().Equals(fieldName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        def.RemoveField(i);
-                        removed.Add(fieldName);
-                        found = true;
-                        fieldCount--;
-                        break;
-                    }
+                    def.RemoveField(field.FieldId);
+                    removed.Add(fieldName);
                 }
-                if (!found)
+                else
+                {
                     notFound.Add(fieldName);
+                }
             }
 
             var result = $"Removed {removed.Count} field(s): {string.Join(", ", removed)}";
@@ -235,39 +229,27 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
             def.ClearFilters();
 
-            // Build a map of existing field names to their ScheduleFieldIds
-            var fieldMap = new Dictionary<string, ScheduleFieldId>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < def.GetFieldCount(); i++)
-            {
-                var field = def.GetField(i);
-                fieldMap[field.GetName()] = field.FieldId;
-            }
-
             int addedCount = 0;
+            var notes = new List<string>();
+            var applied = new List<string>();
             foreach (var filterInfo in Filters)
             {
-                ScheduleFieldId fieldId = null;
+                // Prefers a field already in the schedule (by name, heading or BuiltInParameter alias);
+                // throws a descriptive error if the field cannot be found.
+                var field = ScheduleFieldResolver.ResolveFieldForFilter(schedule, filterInfo.FieldName, filterInfo.FieldIndex, notes);
 
-                if (!string.IsNullOrEmpty(filterInfo.FieldName) &&
-                    fieldMap.TryGetValue(filterInfo.FieldName, out var resolvedFieldId))
-                {
-                    fieldId = resolvedFieldId;
-                }
-                else if (filterInfo.FieldIndex >= 0 && filterInfo.FieldIndex < def.GetFieldCount())
-                {
-                    fieldId = def.GetField(filterInfo.FieldIndex).FieldId;
-                }
-
-                if (fieldId == null)
-                    continue;
-
-                var filterType = (ScheduleFilterType)Enum.Parse(typeof(ScheduleFilterType), filterInfo.FilterType, true);
-                var filter = new ScheduleFilter(fieldId, filterType, filterInfo.FilterValue);
+                // Validates the filter type for the field and converts the value to its storage type;
+                // throws (rolling back the transaction) instead of silently adding a no-op filter.
+                var filter = ScheduleFieldResolver.BuildFilter(schedule, field, filterInfo.FilterType, filterInfo.FilterValue);
                 def.AddFilter(filter);
+                applied.Add($"{field.GetName()} {filter.FilterType} '{filterInfo.FilterValue}'");
                 addedCount++;
             }
 
-            return $"Set {addedCount} filter(s)";
+            var result = $"Set {addedCount} filter(s): {string.Join("; ", applied)}";
+            if (notes.Count > 0)
+                result += $". {string.Join(". ", notes)}";
+            return result;
         }
 
         private string SetSorting(ViewSchedule schedule, ScheduleDefinition def)
@@ -277,23 +259,15 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
             def.ClearSortGroupFields();
 
-            // Build a map of existing field names to their ScheduleFieldIds
-            var fieldMap = new Dictionary<string, ScheduleFieldId>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < def.GetFieldCount(); i++)
-            {
-                var field = def.GetField(i);
-                fieldMap[field.GetName()] = field.FieldId;
-            }
-
             int addedCount = 0;
             foreach (var sortInfo in SortFields)
             {
                 ScheduleFieldId fieldId = null;
 
                 if (!string.IsNullOrEmpty(sortInfo.FieldName) &&
-                    fieldMap.TryGetValue(sortInfo.FieldName, out var resolvedFieldId))
+                    ScheduleFieldResolver.FindExistingField(def, sortInfo.FieldName) is ScheduleField namedField)
                 {
-                    fieldId = resolvedFieldId;
+                    fieldId = namedField.FieldId;
                 }
                 else if (sortInfo.FieldIndex >= 0 && sortInfo.FieldIndex < def.GetFieldCount())
                 {
@@ -301,7 +275,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 }
 
                 if (fieldId == null)
-                    continue;
+                    throw new ArgumentException(
+                        $"Sort field '{sortInfo.FieldName}' (index {sortInfo.FieldIndex}) not found in schedule. Schedule fields: {ScheduleFieldResolver.DescribeFields(def)}");
 
                 var sortOrder = ScheduleSortOrder.Ascending;
                 if (!string.IsNullOrEmpty(sortInfo.SortOrder) &&

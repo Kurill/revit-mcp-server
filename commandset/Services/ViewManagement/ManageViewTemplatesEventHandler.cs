@@ -121,8 +121,14 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     var view = doc.GetElement(elemId) as View;
                     if (view == null || !view.IsTemplate) continue;
 
-                    var newId = view.Duplicate(ViewDuplicateOption.Duplicate);
-                    var newView = doc.GetElement(newId) as View;
+                    // View.Duplicate rejects templates ("View cannot be duplicated"); copying the
+                    // element in place is how Revit itself duplicates a template.
+                    var copiedIds = ElementTransformUtils.CopyElement(doc, elemId, XYZ.Zero);
+                    var newView = copiedIds
+                        .Select(cid => doc.GetElement(cid) as View)
+                        .FirstOrDefault(v => v != null && v.IsTemplate);
+                    if (newView == null) continue;
+                    var newId = newView.Id;
                     if (newView != null && !string.IsNullOrEmpty(NewName))
                     {
                         newView.Name = TemplateIds.Count == 1 ? NewName : $"{NewName} - Copy {duplicated.Count + 1}";

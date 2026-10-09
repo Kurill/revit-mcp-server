@@ -66,10 +66,9 @@ namespace RevitMCPCommandSet.Services
                 if (!Directory.Exists(directory))
                     Directory.CreateDirectory(directory);
 
-                // Read schedule data manually using TableSectionData
-                var tableData = schedule.GetTableData();
-                var bodyData = tableData.GetSectionData(SectionType.Body);
-                var headerData = tableData.GetSectionData(SectionType.Header);
+                // Read the schedule body as displayed; the header row Revit renders inside the body
+                // is returned separately so it is not written twice.
+                var dataRows = ScheduleFieldResolver.ReadBody(schedule, int.MaxValue, out var headers, out int rowCount);
 
                 string delimChar = "\t";
                 switch (Delimiter?.ToLower())
@@ -82,38 +81,12 @@ namespace RevitMCPCommandSet.Services
                 var lines = new List<string>();
 
                 // Add column headers
-                if (IncludeHeaders)
-                {
-                    var definition = schedule.Definition;
-                    var headers = new List<string>();
-                    for (int col = 0; col < definition.GetFieldCount(); col++)
-                    {
-                        var field = definition.GetField(col);
-                        if (!field.IsHidden)
-                            headers.Add(field.ColumnHeading);
-                    }
+                if (IncludeHeaders && headers.Count > 0)
                     lines.Add(string.Join(delimChar, headers));
-                }
 
                 // Add body rows
-                int rowCount = bodyData.NumberOfRows;
-                int colCount = bodyData.NumberOfColumns;
-                for (int row = bodyData.FirstRowNumber; row < bodyData.FirstRowNumber + rowCount; row++)
-                {
-                    var cells = new List<string>();
-                    for (int col = bodyData.FirstColumnNumber; col < bodyData.FirstColumnNumber + colCount; col++)
-                    {
-                        try
-                        {
-                            cells.Add(bodyData.GetCellText(row, col));
-                        }
-                        catch
-                        {
-                            cells.Add("");
-                        }
-                    }
+                foreach (var cells in dataRows)
                     lines.Add(string.Join(delimChar, cells));
-                }
 
                 File.WriteAllLines(exportPath, lines);
 

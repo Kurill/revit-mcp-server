@@ -14,6 +14,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
     {
         public string CategoryName { get; set; } = "OST_Rooms";
         public string ScheduleType { get; set; } = "regular";
+        public int Limit { get; set; } = 200;
+        public string NameFilter { get; set; }
 
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
@@ -30,8 +32,10 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 var doc = app.ActiveUIDocument.Document;
 
                 // Resolve category
-                var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), CategoryName);
-                var catId = new ElementId(bic);
+                // Accepts OST_ names, English names ("Doors") and localized names ("Двери")
+                var catId = CategoryResolver.ResolveToId(doc, CategoryName);
+                if (catId == null)
+                    throw new ArgumentException($"Category '{CategoryName}' could not be resolved");
 
                 // Create temp schedule based on type
                 ViewSchedule schedule;
@@ -65,6 +69,16 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     parameterId = f.ParameterId.GetValue()
                 }).OrderBy(f => f.name).ToList();
 
+                // Some categories expose >1500 fields; filter and cap so the response stays readable
+                if (!string.IsNullOrWhiteSpace(NameFilter))
+                    fields = fields
+                        .Where(f => f.name != null && f.name.IndexOf(NameFilter, StringComparison.OrdinalIgnoreCase) >= 0)
+                        .ToList();
+                int totalCount = fields.Count;
+                bool truncated = Limit > 0 && totalCount > Limit;
+                if (truncated)
+                    fields = fields.Take(Limit).ToList();
+
                 // Delete temp schedule
                 using (var tx = new Transaction(doc, "Delete temp schedule"))
                 {
@@ -76,12 +90,16 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 Result = new AIResult<object>
                 {
                     Success = true,
-                    Message = $"Found {fields.Count} schedulable fields for {CategoryName} ({ScheduleType})",
+                    Message = $"Found {totalCount} schedulable fields for {CategoryName} ({ScheduleType})" +
+                              (truncated ? $"; returning the first {fields.Count} (use nameFilter or a higher limit)" : ""),
                     Response = new
                     {
                         category = CategoryName,
                         scheduleType = ScheduleType,
+                        nameFilter = NameFilter,
                         fieldCount = fields.Count,
+                        totalCount,
+                        truncated,
                         fields
                     }
                 };

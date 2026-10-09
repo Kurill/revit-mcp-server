@@ -19,7 +19,7 @@ GUIDANCE:
 - "Save to specific path": filePath="C:/Exports/doors.xlsx"`,
     {
       categories: z.array(z.string()).optional()
-        .describe("Category names to export (e.g. 'Walls', 'Doors'). Empty = all categories."),
+        .describe("Category names to export: BuiltInCategory ('OST_Doors'), English ('Doors') or localized display names. Empty = all categories."),
       parameterNames: z.array(z.string()).optional()
         .describe("Parameter names to include. Empty = all discovered parameters."),
       includeTypeParameters: z.boolean().optional().default(false)

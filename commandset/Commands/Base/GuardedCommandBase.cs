@@ -45,9 +45,24 @@ namespace RevitMCPCommandSet.Commands.Base
                 if (AutoCheckpoint.AppliesTo(CommandName, parameters))
                     AutoCheckpoint.Run();
 
-                return ExecuteCore(parameters, requestId);
+                _lastWaitTimedOut = false;
+                try
+                {
+                    return ExecuteCore(parameters, requestId);
+                }
+                catch (Exception ex) when (_lastWaitTimedOut)
+                {
+                    // Revit never got to run the call - say why it usually happens.
+                    throw new TimeoutException($"{ex.Message}. {TimeoutHint}", ex);
+                }
             }
         }
+
+        private const string TimeoutHint =
+            "Revit did not finish the command in time. If Revit is in an active tool or edit mode, " +
+            "or a dialog is open, press Esc / close it and retry.";
+
+        private bool _lastWaitTimedOut;
 
         protected abstract object ExecuteCore(JObject parameters, string requestId);
 
@@ -57,6 +72,7 @@ namespace RevitMCPCommandSet.Commands.Base
             AbandonedCalls.Clear(Handler);
             bool completed = base.RaiseAndWaitForCompletion(timeoutMilliseconds);
             _previousCallTimedOut = !completed;
+            _lastWaitTimedOut = !completed;
             // The handler may still run (e.g. after a confirmation dialog is answered);
             // ConfirmationHelper then cancels it instead of applying a change nobody is waiting for.
             if (!completed)

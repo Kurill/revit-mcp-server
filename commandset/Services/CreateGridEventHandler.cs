@@ -189,7 +189,8 @@ namespace RevitMCPCommandSet.Services
 
                 if (renamedCount > 0)
                 {
-                    message += $". {renamedCount} grid(s) were renamed to avoid duplicates.";
+                    message += $". {renamedCount} grid(s) were renamed because the name already exists in the model: " +
+                               string.Join(", ", createdGrids.Where(g => g.WasRenamed).Select(g => $"'{g.OriginalName}' -> '{g.Name}'"));
                 }
 
                 Result = new AIResult<List<GridCreationResult>>
@@ -233,50 +234,51 @@ namespace RevitMCPCommandSet.Services
         private List<string> GenerateLabels(int count, string startLabel, string namingStyle)
         {
             List<string> labels = new List<string>();
-
-            // Extract prefix: everything before the last letter/number sequence
-            string prefix = "";
-            string corePart = startLabel;
-            int lastNonAlphaNum = -1;
-            for (int i = corePart.Length - 1; i >= 0; i--)
-            {
-                if (!char.IsLetterOrDigit(corePart[i]))
-                {
-                    lastNonAlphaNum = i;
-                    break;
-                }
-            }
-            if (lastNonAlphaNum >= 0)
-            {
-                prefix = corePart.Substring(0, lastNonAlphaNum + 1);
-                corePart = corePart.Substring(lastNonAlphaNum + 1);
-            }
+            startLabel = (startLabel ?? "").Trim();
 
             if (namingStyle == "numeric")
             {
-                // Parse starting number from corePart
-                if (!int.TryParse(corePart, out int startNum))
+                // Split into prefix + trailing digit run: "T1" -> ("T", "1"), "1" -> ("", "1"), "T" -> ("T", "")
+                int digitStart = startLabel.Length;
+                while (digitStart > 0 && startLabel[digitStart - 1] >= '0' && startLabel[digitStart - 1] <= '9')
                 {
-                    startNum = 1; // Default to 1 if parsing fails
+                    digitStart--;
                 }
+                string prefix = startLabel.Substring(0, digitStart);
+                string digits = startLabel.Substring(digitStart);
+
+                int startNum = 1; // Default to 1 if the label has no trailing number
+                if (digits.Length > 0 && !int.TryParse(digits, out startNum))
+                {
+                    startNum = 1;
+                }
+                // Preserve zero padding, e.g. "01" -> 01, 02, ...
+                string format = digits.Length > 1 && digits[0] == '0' ? new string('0', digits.Length) : "0";
 
                 for (int i = 0; i < count; i++)
                 {
-                    labels.Add(prefix + (startNum + i).ToString());
+                    labels.Add(prefix + (startNum + i).ToString(format));
                 }
             }
             else // alphabetic
             {
-                // Convert corePart to uppercase for consistency
-                string upperCore = corePart.ToUpper();
-
-                // Get starting letter (use first character if multiple)
-                char startChar = upperCore.Length > 0 ? upperCore[0] : 'A';
-
-                // Ensure it's a letter, default to 'A' if not
-                if (!char.IsLetter(startChar))
+                // The last Latin letter is the incrementing part, everything before it is a prefix:
+                // "A" -> A, B, ...; "TA" -> TA, TB, ...
+                string prefix = "";
+                char startChar = 'A';
+                if (startLabel.Length > 0)
                 {
-                    startChar = 'A';
+                    char last = char.ToUpperInvariant(startLabel[startLabel.Length - 1]);
+                    if (last >= 'A' && last <= 'Z')
+                    {
+                        startChar = last;
+                        prefix = startLabel.Substring(0, startLabel.Length - 1);
+                    }
+                    else
+                    {
+                        // No Latin letter to increment; keep the whole label as prefix and start at 'A'
+                        prefix = startLabel;
+                    }
                 }
 
                 for (int i = 0; i < count; i++)

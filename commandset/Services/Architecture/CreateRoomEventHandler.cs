@@ -259,8 +259,8 @@ namespace RevitMCPCommandSet.Services.Architecture
                             Number = roomNumber, // Use the actual assigned number (may differ from requested if made unique)
                             RequestedNumber = roomInfo.Number, // Original requested number
                             LevelName = level.Name,
-                            Area = room.Area,
-                            Perimeter = room.Perimeter
+                            AreaM2 = Math.Round(room.Area * 0.09290304, 3),
+                            PerimeterM = Math.Round(room.Perimeter * 0.3048, 3)
                         });
                         }
                         catch
@@ -483,7 +483,7 @@ namespace RevitMCPCommandSet.Services.Architecture
         public string Number { get; set; }
         public string RequestedNumber { get; set; } // Original requested number (may differ from Number if made unique)
         public string LevelName { get; set; }
-        public double Area { get; set; }
-        public double Perimeter { get; set; }
+        public double AreaM2 { get; set; } // square meters
+        public double PerimeterM { get; set; } // meters
     }
 }

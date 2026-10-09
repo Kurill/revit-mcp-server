@@ -11,7 +11,7 @@ export function registerCreateScheduleTool(server: McpServer) {
     {
       categoryName: z
         .string()
-        .describe("BuiltInCategory name like 'OST_Walls', 'OST_Doors', 'OST_Rooms'."),
+        .describe("Category: BuiltInCategory name like 'OST_Walls', 'OST_Doors', 'OST_Rooms' (English or localized display names also accepted)."),
       name: z.string().optional().describe("Schedule name"),
       preset: z
         .enum([
@@ -82,7 +82,7 @@ export function registerCreateScheduleTool(server: McpServer) {
             fieldName: z.string().describe("Field name to filter by"),
             filterType: z
               .string()
-              .describe("Equal, NotEqual, GreaterThan, LessThan, Contains, etc."),
+              .describe("Equal, NotEqual, GreaterThan, LessThan, Contains, etc. Substring types only work on text fields; an invalid type for the field returns an error."),
             filterValue: z.string().describe("Filter value"),
           })
         )

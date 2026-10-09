@@ -12,6 +12,7 @@ export function registerAuditFamiliesTool(server: McpServer) {
     {
       includeUnused: z.boolean().optional().describe("Include unused families in results. Default: true."),
       categoryFilter: z.string().optional().describe("Filter families by category name (e.g. 'Doors'). If omitted, audits all categories."),
+      limit: z.number().int().positive().optional().default(50).describe("Maximum number of families listed in detail, most-used first (default 50). Summary, health score and category breakdown always cover all families; response includes totalCount and truncated."),
     },
     async (args, extra) => {
       try {
@@ -19,6 +20,7 @@ export function registerAuditFamiliesTool(server: McpServer) {
           return await revitClient.sendCommand("audit_families", {
             includeUnused: args.includeUnused ?? true,
             categoryFilter: args.categoryFilter ?? "",
+            limit: args.limit ?? 50,
           });
         });
 

@@ -32,8 +32,16 @@ namespace RevitMCPCommandSet.Services
 
                 var doc = app.ActiveUIDocument.Document;
 
+                // Collect all annotation tags: IndependentTag (element/multi-category/material tags)
+                // and SpatialElementTag (RoomTag, AreaTag, SpaceTag - these are NOT IndependentTags,
+                // and RoomTag etc. cannot be used with OfClass directly, so filter on the base class).
+                var tagClassFilter = new ElementMulticlassFilter(new List<Type> { typeof(IndependentTag), typeof(SpatialElementTag) });
+                var tags = new FilteredElementCollector(doc)
+                    .WherePasses(tagClassFilter)
+                    .WhereElementIsNotElementType()
+                    .ToList();
+
                 // Determine scope: specific view or entire document
-                FilteredElementCollector tagCollector;
                 string scopeDescription;
 
                 if (ViewId.HasValue)
@@ -44,21 +52,15 @@ namespace RevitMCPCommandSet.Services
                     var viewElement = doc.GetElement(new ElementId((int)ViewId.Value));
 #endif
                     var targetView = viewElement as View ?? throw new Exception($"Element {ViewId.Value} is not a view");
-                    tagCollector = new FilteredElementCollector(doc, targetView.Id);
+                    // Tags are view-owned. Filtering by OwnerViewId (instead of a view-scoped collector)
+                    // also includes tags that are hidden or outside the crop region.
+                    tags = tags.Where(t => t.OwnerViewId == targetView.Id).ToList();
                     scopeDescription = $"View: {targetView.Name}";
                 }
                 else
                 {
-                    tagCollector = new FilteredElementCollector(doc);
                     scopeDescription = "Entire document";
                 }
-
-                // Collect IndependentTags
-                var tags = tagCollector
-                    .OfClass(typeof(IndependentTag))
-                    .WhereElementIsNotElementType()
-                    .Cast<IndependentTag>()
-                    .ToList();
 
                 // Filter by categories if specified (language-independent via BuiltInCategory)
                 if (Categories != null && Categories.Count > 0)
@@ -93,11 +95,49 @@ namespace RevitMCPCommandSet.Services
                 var emptyTags = new List<object>();
                 var emptyTagIds = new List<ElementId>();
 
-                foreach (var tag in tags)
+                foreach (var element in tags)
                 {
                     bool isEmpty = false;
                     string reason = "";
 
+                    if (element is SpatialElementTag spatialTag)
+                    {
+                        try
+                        {
+                            if (spatialTag is Autodesk.Revit.DB.Architecture.RoomTag roomTag)
+                            {
+                                // Tag on a room in a linked model: host can't be checked locally
+                                if (roomTag.TaggedRoomId != null && roomTag.TaggedRoomId.LinkInstanceId != ElementId.InvalidElementId)
+                                    continue;
+                                if (roomTag.Room == null)
+                                {
+                                    isEmpty = true;
+                                    reason = "Tagged room is missing";
+                                }
+                                else if (string.IsNullOrWhiteSpace(roomTag.TagText))
+                                {
+                                    isEmpty = true;
+                                    reason = "Tag text is empty";
+                                }
+                            }
+                            else if (spatialTag is AreaTag areaTag && areaTag.Area == null)
+                            {
+                                isEmpty = true;
+                                reason = "Tagged area is missing";
+                            }
+                            else if (spatialTag is Autodesk.Revit.DB.Mechanical.SpaceTag spaceTag && spaceTag.Space == null)
+                            {
+                                isEmpty = true;
+                                reason = "Tagged space is missing";
+                            }
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+                    }
+                    else if (element is IndependentTag tag)
+                    {
                     try
                     {
                         // Check if the tag has a valid host
@@ -145,19 +185,20 @@ namespace RevitMCPCommandSet.Services
                     {
                         continue;
                     }
+                    }
 
                     if (isEmpty)
                     {
-                        emptyTagIds.Add(tag.Id);
+                        emptyTagIds.Add(element.Id);
                         emptyTags.Add(new
                         {
                             tagId =
 #if REVIT2024_OR_GREATER
-                                tag.Id.Value,
+                                element.Id.Value,
 #else
-                                tag.Id.IntegerValue,
+                                element.Id.IntegerValue,
 #endif
-                            category = tag.Category?.Name ?? "Unknown",
+                            category = element.Category?.Name ?? "Unknown",
                             reason
                         });
                     }

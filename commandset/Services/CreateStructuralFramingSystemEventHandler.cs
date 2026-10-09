@@ -88,30 +88,24 @@ namespace RevitMCPCommandSet.Services
                 {
                     trans.Start();
 
-                    // 1. Resolve Level - Find nearest existing level to the target elevation (like walls do)
-                    Level level = doc.FindNearestLevel(Parameters.Elevation / 304.8);
+                    // 1. Resolve Level by name (levelName is required by the schema)
+                    var allLevels = new FilteredElementCollector(doc)
+                        .OfClass(typeof(Level))
+                        .Cast<Level>()
+                        .ToList();
+                    Level level = allLevels.FirstOrDefault(l => l.Name.Equals(Parameters.LevelName, StringComparison.Ordinal))
+                        ?? allLevels.FirstOrDefault(l => l.Name.Equals(Parameters.LevelName, StringComparison.OrdinalIgnoreCase));
                     if (level == null)
                     {
-                        // Fallback: try to find any level
-                        level = new FilteredElementCollector(doc)
-                            .OfClass(typeof(Level))
-                            .Cast<Level>()
-                            .FirstOrDefault();
-                    }
-                    if (level == null)
-                    {
-                        throw new Exception("No levels found in project. Please create at least one level before creating beam systems.");
+                        throw new Exception($"Level '{Parameters.LevelName}' not found. Available levels: {string.Join(", ", allLevels.Select(l => l.Name))}");
                     }
 
-                    // Add info about which level was selected
-                    double levelElevationMm = level.Elevation * 304.8;
-                    warnings.Add($"Using level '{level.Name}' at elevation {levelElevationMm:F0}mm (nearest to target elevation {Parameters.Elevation:F0}mm)");
-
-                    // 2. Build rectangular profile (4 curves in closed loop)
+                    // 2. Build rectangular profile (4 curves in closed loop) in the level's plane.
+                    // 'elevation' is an offset from the level and is applied to the beams below.
                     List<Curve> profileCurves = BuildRectangularProfile(
                         Parameters.XMin, Parameters.XMax,
                         Parameters.YMin, Parameters.YMax,
-                        Parameters.Elevation
+                        level.Elevation * 304.8
                     );
 
                     // 3. Map direction edge to curve index
@@ -144,7 +138,7 @@ namespace RevitMCPCommandSet.Services
 
                     // 8. Apply elevation offset to all beams using Z_OFFSET_VALUE parameter
                     // Note: BeamSystem.Create() places beams at level elevation. We use Z_OFFSET_VALUE to offset them.
-                    double elevationOffsetFt = (Parameters.Elevation / 304.8) - level.Elevation;
+                    double elevationOffsetFt = Parameters.Elevation / 304.8;
 
                     if (Math.Abs(elevationOffsetFt) > 0.001) // Only apply if there's a meaningful offset
                     {
