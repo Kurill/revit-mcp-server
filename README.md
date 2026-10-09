@@ -92,6 +92,15 @@ Installed layout:
             └── server\build\index.js        <- the MCP server
 ```
 
+## Updates
+
+An installed release updates itself. When Revit closes, the add-in starts `auto-update.ps1` hidden. The script waits until no Revit is running, then checks the latest [release](https://github.com/Kurill/revit-mcp-server/releases). If its tag differs from `revit_mcp_plugin\version.txt`, it downloads the ZIP for that Revit year, verifies it against the release's `.sha256` file and copies it over the installation. The next Revit start runs the new version. Progress goes to `revit_mcp_plugin\logs\update-<date>.log`.
+
+- Publishing a release is all it takes to update every machine that installed from a release.
+- A source build has no `version.txt` and is never updated.
+- Set the user environment variable `REVIT_MCP_AUTO_UPDATE=0` to turn updates off.
+- Anyone who can publish a release in this repository can ship code to those machines, so keep 2FA on the GitHub account.
+
 ## Connect an MCP client
 
 **Claude Desktop** is configured by the installer. To repair the entry later:

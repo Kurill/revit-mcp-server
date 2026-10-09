@@ -128,8 +128,14 @@ jobs:
                 Copy-Item -Path 'scripts' -Destination "$addinDir/scripts" -Recurse -Force
               }
 
+              # auto-update.ps1 compares version.txt with the latest release tag
+              Set-Content -Path "$addinDir/revit_mcp_plugin/version.txt" -Value $version -NoNewline
+              Copy-Item -Path 'scripts/auto-update.ps1' -Destination "$addinDir/revit_mcp_plugin/auto-update.ps1" -Force
+
               $zipName = "$outputDir/mcp-servers-for-revit-$version-Revit$($rv.Year).zip"
               Compress-Archive -Path "$addinDir/*" -DestinationPath $zipName
+              $hash = (Get-FileHash -Path $zipName -Algorithm SHA256).Hash.ToLowerInvariant()
+              Set-Content -Path "$zipName.sha256" -Value "$hash  $(Split-Path $zipName -Leaf)" -NoNewline
               Write-Host "Created $zipName"
             } else {
               Write-Host "Warning: AddIn output not found: $addinDir"
@@ -146,7 +152,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-assets/*.zip
+          files: |
+            release-assets/*.zip
+            release-assets/*.sha256
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
