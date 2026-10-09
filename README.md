@@ -37,7 +37,7 @@ The AI works on the live model. These rules hold for every tool:
 
 - **Dry run first.** Tools that change many elements at once (`import_from_excel`, `bulk_modify_parameter_values`, `clear_parameter_values`, `delete_element`, `wipe_empty_tags`, `purge_unused`, `manage_unplaced_views`) default to `dryRun=true` and return what would change: element, parameter, old value → new value. Nothing is written until the agent calls again with `dryRun=false`. The site/MEP tools accept `dryRun` too, but default to running.
 - **Revit asks you.** Deletes, bulk parameter writes, Excel import, workset/phase/type changes and purges show a Revit dialog with the number of affected elements; the default button is No. The command waits up to 120 s for your answer.
-- **No arbitrary code by default.** `send_code_to_revit` (runs C# inside Revit) ships disabled. If you enable it in *Settings → Command Set*, every run shows the code in a dialog first.
+- **You see the code before it runs.** `send_code_to_revit` (runs C# inside Revit) is enabled by default, and every run shows the code in a dialog first. Turn it off in *Settings → Command Set* if you do not need it.
 - **A result is the real result.** Each call waits for its own run and reports its own outcome. If Revit rolls a transaction back (failure handling, or you cancel an error dialog), the tool reports an error instead of success. While a timed-out call is still pending in Revit (for example behind an open dialog), the same tool refuses new calls.
 - **Units are explicit.** Excel import and bulk edits write values in the project's display units, the same form `export_to_excel` produces. `set_element_parameters` takes plain numbers in Revit internal units (feet, radians), as `get_element_parameters` returns them, or a string with a unit such as `"3000 mm"`. `export_room_data` returns m², m³ and m.
 - **Exports cannot overwrite your models.** Export paths must be absolute and end in the format's extension (`.xlsx`, `.csv`/`.txt`/`.tsv`, `.ifc`, …).
@@ -114,7 +114,7 @@ Use the server from the plugin folder. The `mcp-server-for-revit` package on npm
 ## Use
 
 1. Open the model in Revit.
-2. **Add-Ins → Revit MCP Plugin → Revit MCP Switch** starts the server; the indicator turns green.
+2. The server starts automatically when Revit loads. **Add-Ins → Revit MCP Plugin → Revit MCP Switch** stops it or starts it again; the indicator is green while it runs.
 3. Ask your MCP client, or use the **MCP Panel** button for the chat inside Revit.
 
 **Settings → Command Set** turns individual tools on and off. Turn off what a workflow does not need.
@@ -140,8 +140,8 @@ The full tool reference with parameters and examples is in [COMMANDS.md](COMMAND
 |---------|-----|
 | Only the Switch button in the ribbon | Source code was copied instead of a release ZIP, or files are missing. Uninstall and install from a release |
 | Add-in missing from Add-Ins | `mcp-servers-for-revit.addin` must sit directly in `Addins\<year>\`, and the ZIP year must match Revit |
-| Client says "connection refused" | Revit open, Switch on (green). Another program may hold 8080–8089: `netstat -ano \| findstr :808` |
-| A tool is "not found" | It is disabled in *Settings → Command Set* (`send_code_to_revit` is off by default) |
+| Client says "connection refused" | Revit open, server running (green; use the Switch if it was stopped). Another program may hold 8080–8089: `netstat -ano \| findstr :808` |
+| A tool is "not found" | It is disabled in *Settings → Command Set* |
 | "previous call timed out and is still pending" | A Revit dialog is waiting for you, or Revit is still working. Answer it, check the model, then retry |
 | Tool list in Claude Desktop is stale | Restart Claude Desktop |
 

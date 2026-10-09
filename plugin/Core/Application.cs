@@ -58,7 +58,32 @@ namespace revit_mcp_plugin.Core
             mcp_settings_pushButtonData.LargeImage = new BitmapImage(new Uri("/RevitMCPPlugin;component/Core/Ressources/settings-32.png", UriKind.RelativeOrAbsolute));
             mcpPanel.AddItem(mcp_settings_pushButtonData);
 
+            // Auto-start the socket server on the first Idling event (needs a UIApplication)
+            application.Idling += AutoStartOnIdling;
+
             return Result.Succeeded;
+        }
+
+        private void AutoStartOnIdling(object sender, Autodesk.Revit.UI.Events.IdlingEventArgs e)
+        {
+            var uiApp = sender as UIApplication;
+            if (uiApp == null) return;
+            uiApp.Idling -= AutoStartOnIdling;
+
+            try
+            {
+                var service = SocketService.Instance;
+                if (!service.IsRunning)
+                {
+                    service.Initialize(uiApp);
+                    service.Start();
+                    McpLogger.Info("Application", "MCP server auto-started");
+                }
+            }
+            catch (Exception ex)
+            {
+                McpLogger.Error("Application", "MCP auto-start failed", ex);
+            }
         }
 
         public Result OnShutdown(UIControlledApplication application)
