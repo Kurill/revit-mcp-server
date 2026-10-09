@@ -296,8 +296,9 @@ RULES:
                 using (var client = new TcpClient())
                 {
                     // Connect with timeout
-                    int port = Core.SocketService.Instance.Port;
-                    if (port == 0)
+                    var service = Core.SocketService.Instance;
+                    int port = service.Port;
+                    if (!service.IsRunning)
                         return "MCP command failed: the Revit MCP server is not running (use the MCP switch).";
                     var connectTask = client.ConnectAsync("127.0.0.1", port);
                     if (await Task.WhenAny(connectTask, Task.Delay(10000)) != connectTask)

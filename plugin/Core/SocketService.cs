@@ -27,8 +27,6 @@ namespace revit_mcp_plugin.Core
         private ICommandRegistry _commandRegistry;
         private ILogger _logger;
 
-        /// <summary>Port the listener is bound to, or 0 when it is not running.</summary>
-        public int Port { get; private set; }
 
         private const int MaxMessageChars = 16 * 1024 * 1024;
         private readonly System.Collections.Concurrent.ConcurrentDictionary<TcpClient, byte> _clients =
@@ -183,7 +181,6 @@ namespace revit_mcp_plugin.Core
 
                 _listener = new TcpListener(IPAddress.Loopback, port);
                 _listener.Start();
-                Port = port;
 
                 _listenerThread = new Thread(ListenForClients)
                 {
@@ -213,7 +210,6 @@ namespace revit_mcp_plugin.Core
             try
             {
                 _isRunning = false;
-                Port = 0;
 
                 _listener?.Stop();
                 _listener = null;
