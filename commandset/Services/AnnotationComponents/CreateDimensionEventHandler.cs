@@ -278,7 +278,11 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
                 {
                     var sideRefs = HostObjectUtils.GetSideFaces(wall,
                         side == "interior" ? ShellLayerType.Interior : ShellLayerType.Exterior);
-                    if (sideRefs.Count > 0)
+                    // A side face only works when it is perpendicular to the dimension line;
+                    // a dimension along the wall, or a curved wall, falls through to nearest.
+                    var sideFace = sideRefs.Count > 0 ? wall.GetGeometryObjectFromReference(sideRefs[0]) as PlanarFace : null;
+                    if (sideFace != null &&
+                        (dimensionDirection == null || Math.Abs(sideFace.FaceNormal.DotProduct(dimensionDirection)) > 0.99))
                     {
                         references.Add(sideRefs[0]);
                         return references;

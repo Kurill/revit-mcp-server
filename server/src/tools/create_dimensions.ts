@@ -45,7 +45,7 @@ export function registerCreateDimensionsTool(server: McpServer) {
               .optional()
               .default("nearest")
               .describe(
-                "Which wall face to reference. 'nearest' (default): the face closest to startPoint/endPoint, so place those points on the faces you mean. 'interior'/'exterior': the wall's interior/exterior side (by wall orientation; falls back to nearest for curtain walls)."
+                "Which wall face to reference. 'nearest' (default): the face closest to startPoint/endPoint, so place those points on the faces you mean. 'interior'/'exterior': the wall's interior/exterior side (by wall orientation). Falls back to nearest for curtain walls, curved walls and dimensions that run along the wall."
               ),
             dimensionType: z
               .string()
