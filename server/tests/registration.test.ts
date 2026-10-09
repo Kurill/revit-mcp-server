@@ -9,7 +9,7 @@ import {
   type RegistrationResult,
 } from "./helpers/toolHarness.js";
 // @ts-expect-error - plain .mjs module shared with generate-tool-schemas.mjs
-import { formatToolSchemasTxt, formatToolSchemasJson } from "../tool-schema-format.mjs";
+import { formatToolSchemasTxt } from "../tool-schema-format.mjs";
 
 vi.mock("../src/utils/tokenLogger.js", () => ({ logTokenUsage: vi.fn() }));
 
@@ -71,33 +71,6 @@ describe("tool registration against a real McpServer", () => {
 });
 
 describe("generated schema files match the live registration (server <-> plugin drift)", () => {
-  it("plugin/tool_schemas.json is up to date", () => {
-    const committed = readRepoFile("plugin/tool_schemas.json");
-    // Compare parsed JSON: key order inside zod-to-json-schema output (e.g. where
-    // "$schema" lands for an empty shape) differs between module graphs and is
-    // not meaningful drift.
-    const generated = JSON.parse(formatToolSchemasJson(listedTools));
-    const parsed = JSON.parse(committed);
-    let equal = true;
-    try {
-      expect(parsed).toEqual(generated);
-    } catch {
-      equal = false;
-    }
-    if (!equal) {
-      const committedNames = parsed.map((t: any) => t.name);
-      const liveNames = listedTools.map((t) => t.name);
-      const missing = liveNames.filter((n) => !committedNames.includes(n));
-      const stale = committedNames.filter((n: string) => !liveNames.includes(n));
-      expect.fail(
-        `plugin/tool_schemas.json is out of date.\n` +
-          `  tools missing from file: ${missing.join(", ") || "(none)"}\n` +
-          `  tools only in file:      ${stale.join(", ") || "(none)"}\n` +
-          `  (if both are empty a description or parameter changed)\n${REGEN_HINT}`
-      );
-    }
-  });
-
   it("tool-schemas.txt is up to date", () => {
     const committed = readRepoFile("tool-schemas.txt");
     const generated: string = formatToolSchemasTxt(listedTools);

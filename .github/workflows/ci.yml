@@ -39,12 +39,12 @@ jobs:
           npm ci
           npm run build
 
-      # `npm run build` regenerates tool-schemas.txt and plugin/tool_schemas.json
+      # `npm run build` regenerates tool-schemas.txt
       # from the TypeScript tool definitions. Fail if a PR changed tools but
       # forgot to commit the regenerated schemas. --ignore-cr-at-eol keeps
       # Windows autocrlf checkouts from producing a false line-ending diff.
       - name: Check generated tool schemas are committed
-        run: git diff --exit-code --ignore-cr-at-eol -- tool-schemas.txt plugin/tool_schemas.json
+        run: git diff --exit-code --ignore-cr-at-eol -- tool-schemas.txt
 
       # "Release R27" maps to the test project's Release.R27 configuration in the
       # solution, so this compiles plugin, commandset AND the tests in one pass.

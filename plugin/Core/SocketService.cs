@@ -373,27 +373,13 @@ namespace revit_mcp_plugin.Core
                     object result = command.Execute(request.GetParamsObject(), request.Id);
                     stopwatch.Stop();
 
-                    // Log to dockable panel
-                    try
-                    {
-                        UI.MCPDockablePanel.Instance?.LogCommand(
-                            request.Method, true, "Success", stopwatch.ElapsedMilliseconds);
-                    }
-                    catch { }
+                    McpLogger.Info("SocketService", $"Command '{request.Method}' succeeded in {stopwatch.ElapsedMilliseconds} ms");
 
                     return CreateSuccessResponse(request.Id, result);
                 }
                 catch (Exception ex)
                 {
                     McpLogger.Error("SocketService", $"Command '{request.Method}' failed", ex);
-
-                    // Log error to dockable panel
-                    try
-                    {
-                        UI.MCPDockablePanel.Instance?.LogCommand(
-                            request.Method, false, ex.Message, 0);
-                    }
-                    catch { }
 
                     return CreateErrorResponse(request.Id, JsonRPCErrorCodes.InternalError,
                         $"Command '{request.Method}' failed: {ex.Message}. Check the MCP log for details.");

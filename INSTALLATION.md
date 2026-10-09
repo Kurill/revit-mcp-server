@@ -10,7 +10,6 @@ Complete guide to install and configure **mcp-servers-for-revit** on Autodesk Re
 - [Method 1: Install from Release (recommended)](#method-1-install-from-release-recommended)
 - [Method 2: Build from Source](#method-2-build-from-source)
 - [MCP Server Configuration](#mcp-server-configuration)
-- [API Key Configuration (Chat Panel)](#api-key-configuration-chat-panel)
 - [Verifying the Installation](#verifying-the-installation)
 - [Updating](#updating)
 - [Uninstalling](#uninstalling)
@@ -134,7 +133,7 @@ cd mcp-servers-for-revit
 
 ### Step 2: Build the MCP Server
 
-> **Note**: `server/build/` is gitignored, so this step is **required** when building from source — without it the plugin's "Revit MCP Switch" fails its health check with *"index.js not found"*.
+> **Note**: `server/build/` is gitignored, so this step is **required** when building from source — without it the add-in's server start fails its health check with *"index.js not found"*.
 
 ```bash
 cd server
@@ -192,7 +191,7 @@ Then copy the compiled server into the deployed add-in (release ZIPs bundle it, 
 node server/deploy-addins.mjs
 ```
 
-> **Note on ordering**: `deploy-addins.mjs` only copies into Addins folders where `revit_mcp_plugin/Commands/RevitMCPCommandSet/` already exists (the plugin folder alone is not enough). `npm run build` runs it automatically, but if you built the server *before* deploying the plugin (the step order above), run it again now — otherwise the "Revit MCP Switch" button fails with *"index.js not found"*.
+> **Note on ordering**: `deploy-addins.mjs` only copies into Addins folders where `revit_mcp_plugin/Commands/RevitMCPCommandSet/` already exists (the plugin folder alone is not enough). `npm run build` runs it automatically, but if you built the server *before* deploying the plugin (the step order above), run it again now — otherwise the add-in's server start fails with *"index.js not found"*.
 
 > **Node.js required for from-source deploys**: unlike release ZIPs, a from-source deploy has no bundled `server/runtime/node.exe`; the plugin's health check falls back to `node.exe` on Revit's `PATH`, so Node.js must be installed system-wide.
 
@@ -245,68 +244,11 @@ Configure the MCP server with:
 
 ---
 
-## API Key Configuration (Chat Panel)
-
-The built-in chat panel in Revit requires an **Anthropic** API key to work. This is only needed for the chat panel — using it through Claude Desktop/Claude Code does not require additional configuration.
-
-### Obtaining an API Key
-
-1. Go to [console.anthropic.com](https://console.anthropic.com)
-2. Sign up or log in
-3. Go to **API Keys** and create a new key
-4. Copy the key (it is shown only once)
-
-### Method 1: Environment Variable (recommended)
-
-1. Open **System Settings > Environment Variables**
-2. Add a new user variable:
-   - **Name**: `ANTHROPIC_API_KEY`
-   - **Value**: `sk-ant-...` (your API key)
-3. Restart Revit
-
-Or from a terminal (current session):
-```bash
-setx ANTHROPIC_API_KEY "sk-ant-..."
-```
-
-### Method 2: Text File
-
-1. Create the folder (if it doesn't exist):
-   ```
-   %USERPROFILE%\.claude\
-   ```
-
-2. Create the file `api_key.txt` with your API key:
-   ```
-   %USERPROFILE%\.claude\api_key.txt
-   ```
-   File contents (key only, no spaces):
-   ```
-   sk-ant-...
-   ```
-
-> **Security**: Never share your API key. The `api_key.txt` file is read locally by the plugin only.
-
----
-
 ## Verifying the Installation
 
-### 1. Verify the Revit Plugin
+The add-in has no ribbon buttons. It starts its server when Revit has finished loading and listens on `127.0.0.1:8080` (8081–8089 if 8080 is taken) until Revit closes. Its log is `mcp-<date>.log` in `%AppData%\Autodesk\Revit\Addins\<version>\revit_mcp_plugin\logs\`.
 
-1. Open Revit
-2. Look for the **"Revit MCP Plugin"** panel in the ribbon (Add-Ins tab)
-3. You should see 3 buttons:
-   - **Revit MCP Switch** — Start/stop the socket service
-   - **MCP Panel** — Show/hide the chat panel
-   - **Settings** — Open settings
-
-### 2. Start the MCP Service
-
-1. Click **"Revit MCP Switch"** in the ribbon
-2. The service starts on TCP port 8080
-3. The indicator in the chat panel turns green: **"MCP Online"**
-
-### 3. Connection Test
+### Connection Test
 
 From Claude Desktop or Claude Code, try:
 
@@ -315,13 +257,6 @@ Use the say_hello tool with the message "Connection test"
 ```
 
 If everything works, a dialog will appear in Revit with the message.
-
-### 4. Chat Panel Test (optional)
-
-1. Click **"MCP Panel"** to open the panel
-2. Verify that it shows **"MCP Online"** in the top right
-3. Type a message, e.g.: "Tell me the project info"
-4. Claude should respond using the Revit tools
 
 ---
 
@@ -361,29 +296,23 @@ dotnet build mcp-servers-for-revit.sln -c "Debug R26"
 
 ## Troubleshooting
 
-### The plugin does not appear in the ribbon
+### The add-in does not load
 
 - Verify that the `.addin` file is in the correct folder
 - Check that the ZIP version matches your Revit version
 - Check the Revit journal for errors: `%LOCALAPPDATA%\Autodesk\Revit\Autodesk Revit <version>\Journals\`
 
-### "MCP Offline" in the chat panel
+### The server is not reachable
 
-- Click **"Revit MCP Switch"** to start the service
-- Verify that port 8080 is not occupied by another program
-- Check the Windows firewall (it must allow local connections on port 8080)
+- Restart Revit; the server starts once Revit has finished loading
+- Check the add-in log for "MCP server auto-started" or the start error
+- Another program may hold ports 8080–8089: `netstat -ano | findstr :808`
 
 ### Claude cannot connect to tools
 
 - Verify that the MCP server is configured in the AI client
-- Make sure Revit is open and the MCP service is active (green indicator)
+- Make sure Revit is open
 - Restart the AI client after modifying the configuration
-
-### "API key not configured" error in the chat panel
-
-- Configure the Anthropic API key using one of the methods described above
-- Restart Revit after setting the environment variable
-- Verify that the `api_key.txt` file contains only the key (`sk-ant-...`), with no extra spaces or newlines
 
 ### Build fails for Revit 2023/2024
 
@@ -396,4 +325,4 @@ If another program is using port 8080, check with:
 ```bash
 netstat -ano | findstr :8080
 ```
-Close the program occupying the port, or change the port in the source code (`SocketService.cs` and `SocketClient.ts`).
+The add-in falls back to 8081–8089 and writes the port it bound to `mcp-port.txt` next to the plugin, which the MCP server reads.

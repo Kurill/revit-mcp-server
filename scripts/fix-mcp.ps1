@@ -296,10 +296,10 @@ foreach ($year in $REVIT_YEARS) {
                 $enabled = ($reg.Commands | Where-Object { $_.Enabled }).Count
                 if ($total -eq 0) {
                     OK "Revit $year plugin installed"
-                    WARN "  commandRegistry.json is empty -- open Revit -> Add-Ins -> Settings -> Select All -> Save"
+                    WARN "  commandRegistry.json is empty -- reinstall the plugin"
                 } elseif ($enabled -eq 0) {
                     OK "Revit $year plugin installed"
-                    WARN "  All $total commands DISABLED -- open Revit -> Add-Ins -> Settings -> Select All -> Save"
+                    WARN "  All $total commands DISABLED -- reinstall the plugin"
                 } else {
                     OK "Revit $year plugin installed ($enabled/$total commands enabled)"
                 }
@@ -342,7 +342,7 @@ if ($revitProcs) {
         OK "Revit running  (PID $($p.Id))  $($p.MainWindowTitle)"
     }
 } else {
-    WARN "Revit is NOT running -- start Revit and click Add-Ins -> Revit MCP Switch"
+    WARN "Revit is NOT running -- start Revit; the MCP server starts with it"
 }
 
 try {
@@ -357,9 +357,9 @@ try {
         FAIL "Port $MCP_PORT is CLOSED"
         if ($revitProcs) {
             INFO "  Revit is running but MCP server not started"
-            INFO "  -> In Revit: Add-Ins tab -> click 'Revit MCP Switch'"
+            INFO "  -> Restart Revit; the MCP server starts once Revit has loaded"
         } else {
-            INFO "  -> Start Revit first, then click 'Revit MCP Switch'"
+            INFO "  -> Start Revit; the MCP server starts once Revit has loaded"
         }
     }
 } catch {

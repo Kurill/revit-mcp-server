@@ -52,25 +52,10 @@
         <PackageReference Include="RevitMCPSDK" Version="$(RevitVersion).*"/>
     </ItemGroup>
     <ItemGroup>
-        <Resource Include="Core\Ressources\icon-16.png"/>
-        <Resource Include="Core\Ressources\icon-32.png"/>
-    </ItemGroup>
-    <ItemGroup>
-        <Resource Include="Core\Ressources\panel-16.png"/>
-        <Resource Include="Core\Ressources\panel-32.png"/>
-    </ItemGroup>
-    <ItemGroup>
-        <Resource Include="Core\Ressources\settings-16.png"/>
-        <Resource Include="Core\Ressources\settings-32.png"/>
-    </ItemGroup>
-    <ItemGroup>
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
     </ItemGroup>
     <ItemGroup>
         <None Update="mcp-servers-for-revit.addin">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="tool_schemas.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
