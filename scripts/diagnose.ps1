@@ -13,7 +13,7 @@
 
 .EXAMPLE
     # One-liner from GitHub
-    powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/LuDattilo/revit-mcp-server/main/scripts/diagnose.ps1 | iex"
+    powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/Kurill/revit-mcp-server/main/scripts/diagnose.ps1 | iex"
 #>
 
 $ErrorActionPreference = 'Continue'
@@ -26,7 +26,7 @@ if ($_commonPath -and (Test-Path $_commonPath)) {
     . $_commonPath
 } else {
     # Inline fallback for irm | iex usage
-    $REPO          = 'LuDattilo/revit-mcp-server'
+    $REPO          = 'Kurill/revit-mcp-server'
     $PLUGIN_NAME   = 'mcp-servers-for-revit'
     $PLUGIN_FOLDER = 'revit_mcp_plugin'
     $NPM_PACKAGE   = 'mcp-server-for-revit'

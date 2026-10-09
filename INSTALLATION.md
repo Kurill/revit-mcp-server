@@ -70,7 +70,7 @@ dotnet --list-sdks
 
 ### Step 1: Download the Release
 
-1. Go to the [Releases](https://github.com/LuDattilo/revit-mcp-server/releases) page
+1. Go to the [Releases](https://github.com/Kurill/revit-mcp-server/releases) page
 2. Download the ZIP matching your Revit version:
    - `mcp-servers-for-revit-vX.Y.Z-Revit2023.zip`
    - `mcp-servers-for-revit-vX.Y.Z-Revit2024.zip`
@@ -128,7 +128,7 @@ Addins/<version>/
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/LuDattilo/revit-mcp-server.git
+git clone https://github.com/Kurill/revit-mcp-server.git
 cd mcp-servers-for-revit
 ```
 
@@ -216,13 +216,15 @@ Or manually edit `%APPDATA%\Claude\claude_desktop_config.json`:
 ```json
 {
     "mcpServers": {
-        "mcp-server-for-revit": {
-            "command": "npx",
-            "args": ["-y", "mcp-server-for-revit"]
+        "revit-mcp": {
+            "command": "node",
+            "args": ["C:\\Users\\<you>\\AppData\\Roaming\\Autodesk\\Revit\\Addins\\2025\\revit_mcp_plugin\\Commands\\RevitMCPCommandSet\\server\\build\\index.js"]
         }
     }
 }
 ```
+
+Use the server bundled with the plugin (replace `2025` with your Revit version). The `mcp-server-for-revit` package on npm is published by the upstream project and does not carry this fork's changes.
 
 Restart Claude Desktop and verify that the hammer icon appears at the bottom right.
 
@@ -231,7 +233,7 @@ Restart Claude Desktop and verify that the hammer icon appears at the bottom rig
 Run the following command to register the MCP server:
 
 ```bash
-claude mcp add mcp-server-for-revit -- npx -y mcp-server-for-revit
+claude mcp add revit-mcp -- node "%APPDATA%\Autodesk\Revit\Addins\2025\revit_mcp_plugin\Commands\RevitMCPCommandSet\server\build\index.js"
 ```
 
 ### For Other MCP Clients (Cline, Continue, etc.)
