@@ -103,22 +103,14 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
             }
         }
 
-        // "confirm": false on the send_code_to_revit entry of Commands/commandRegistry.json
-        // (the file the plugin reads "enabled" from) turns the dialog off. Read on every run so
-        // it can be toggled without restarting Revit; anything missing or unreadable keeps the dialog.
+        // A user environment variable survives reinstalls and auto-updates, which rewrite
+        // commandRegistry.json. It is read from the registry on every run, so changing it
+        // needs no Revit restart.
         private static bool ConfirmationRequired()
         {
             try
             {
-                var dllDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var registry = Path.GetFullPath(Path.Combine(dllDir, "..", "..", "commandRegistry.json"));
-                if (!File.Exists(registry))
-                    return true;
-
-                var json = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(registry));
-                var entry = json["commands"]?.FirstOrDefault(c => (string)c["commandName"] == "send_code_to_revit");
-                var confirm = entry?["confirm"];
-                return confirm == null || confirm.Type != Newtonsoft.Json.Linq.JTokenType.Boolean || (bool)confirm;
+                return Environment.GetEnvironmentVariable("REVIT_MCP_CONFIRM_CODE", EnvironmentVariableTarget.User) != "0";
             }
             catch
             {
