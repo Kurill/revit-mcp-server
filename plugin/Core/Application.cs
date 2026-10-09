@@ -14,7 +14,7 @@ namespace revit_mcp_plugin.Core
         {
             var pluginDir = Path.GetDirectoryName(typeof(Application).Assembly.Location);
             McpLogger.Initialize(pluginDir);
-            McpLogger.Info("Application", "Plugin starting");
+            McpLogger.Info("Application", $"Plugin starting, version {AutoUpdater.InstalledVersion(pluginDir) ?? "source build"}");
 
             // Auto-configure Claude Desktop on first run (silent, never crashes)
             ClaudeDesktopConfigurator.EnsureConfigured();
@@ -60,6 +60,10 @@ namespace revit_mcp_plugin.Core
             {
                 System.Diagnostics.Trace.WriteLine($"[RevitMCP] Error during shutdown: {ex.Message}");
             }
+
+            AutoUpdater.ScheduleAfterExit(
+                Path.GetDirectoryName(typeof(Application).Assembly.Location),
+                application.ControlledApplication.VersionNumber);
 
             return Result.Succeeded;
         }
