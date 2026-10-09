@@ -83,7 +83,7 @@ namespace RevitMCPCommandSet.Services
                 }
 
                 // Confirm deletion with user before proceeding
-                if (elementIdsToDelete.Count > 0 && !ConfirmationHelper.Confirm("delete", elementIdsToDelete.Count))
+                if (elementIdsToDelete.Count > 0 && !ConfirmationHelper.Confirm(this, "delete", elementIdsToDelete.Count))
                 {
                     IsSuccess = false;
                     Cancelled = true;

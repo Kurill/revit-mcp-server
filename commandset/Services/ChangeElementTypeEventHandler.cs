@@ -45,7 +45,7 @@ namespace RevitMCPCommandSet.Services
                     return;
                 }
 
-                if (!ConfirmationHelper.Confirm("change type for", ElementIds.Count))
+                if (!ConfirmationHelper.Confirm(this, "change type for", ElementIds.Count))
                 {
                     Result = new AIResult<object>
                     {

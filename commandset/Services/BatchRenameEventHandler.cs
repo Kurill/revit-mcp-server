@@ -50,7 +50,7 @@ namespace RevitMCPCommandSet.Services
                     return;
                 }
 
-                if (!DryRun && !ConfirmationHelper.Confirm("rename", elements.Count))
+                if (!DryRun && !ConfirmationHelper.Confirm(this, "rename", elements.Count))
                 {
                     Result = new AIResult<object>
                     {

@@ -87,7 +87,7 @@ namespace RevitMCPCommandSet.Services
                 int deletedCount = 0;
                 if (!DryRun && purgeableList.Count > 0)
                 {
-                    if (!ConfirmationHelper.Confirm("purge", Math.Min(purgeableList.Count, MaxElements)))
+                    if (!ConfirmationHelper.Confirm(this, "purge", Math.Min(purgeableList.Count, MaxElements)))
                     {
                         Result = new AIResult<object>
                         {

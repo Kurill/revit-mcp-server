@@ -92,7 +92,7 @@ namespace RevitMCPCommandSet.Services
                     return;
                 }
 
-                if (!ConfirmationHelper.Confirm($"delete workset '{WorksetName}' (moving {elementCount} elements to '{MoveToWorksetName}'). This action affects", 1))
+                if (!ConfirmationHelper.Confirm(this, $"delete workset '{WorksetName}' (moving {elementCount} elements to '{MoveToWorksetName}'). This action affects", 1))
                 {
                     Result = new AIResult<object>
                     {

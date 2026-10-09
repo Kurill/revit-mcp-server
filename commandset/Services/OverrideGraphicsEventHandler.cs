@@ -62,7 +62,7 @@ namespace RevitMCPCommandSet.Services
                     return;
                 }
 
-                if (!ConfirmationHelper.Confirm("modify graphics for", ElementIds.Count))
+                if (!ConfirmationHelper.Confirm(this, "modify graphics for", ElementIds.Count))
                 {
                     Result = new AIResult<object>
                     {

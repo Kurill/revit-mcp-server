@@ -75,7 +75,7 @@ namespace RevitMCPCommandSet.Services
                 }
 
                 // User confirmation
-                if (!ConfirmationHelper.Confirm($"modify compound structure of type '{hostType.Name}'", 1))
+                if (!ConfirmationHelper.Confirm(this, $"modify compound structure of type '{hostType.Name}'", 1))
                 {
                     Result = new AIResult<object>
                     {
