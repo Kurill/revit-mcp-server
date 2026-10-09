@@ -11,7 +11,7 @@ export function registerClearParameterValuesTool(server: McpServer) {
     {
       parameterName: z.string().describe("Parameter to clear."),
       categories: z.array(z.string()).optional().describe("Filter by categories (e.g. ['Walls', 'Doors'])."),
-      scope: z.enum(["whole_model", "active_view", "selection"]).optional().default("whole_model").describe("Scope of elements to target."),
+      scope: z.enum(["whole_model", "active_view", "selection"]).optional().default("whole_model").describe("Scope of elements to target. whole_model requires at least one entry in categories."),
       filterValue: z.string().optional().describe("Only clear elements whose parameter contains this value."),
       parameterType: z.enum(["instance", "type"]).optional().default("instance").describe("Whether to clear instance or type parameter."),
       dryRun: z.boolean().optional().default(true).describe("If true (default), preview changes without applying. Set to false to execute."),
