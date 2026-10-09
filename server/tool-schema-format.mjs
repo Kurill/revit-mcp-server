@@ -1,7 +1,7 @@
 /**
- * Pure formatting of an MCP tools/list result into the two generated schema files.
- * Shared by generate-tool-schemas.mjs (writes them at build time) and the vitest
- * drift test (compares them against the committed copies).
+ * Pure formatting of an MCP tools/list result into tool-schemas.txt.
+ * Shared by generate-tool-schemas.mjs (writes it at build time) and the vitest
+ * drift test (compares it against the committed copy).
  */
 
 /** tool-schemas.txt: one compact signature line per tool, sorted by name. */
@@ -33,16 +33,4 @@ export function formatToolSchemasTxt(tools) {
       return `${t.name}(${params})`;
     });
   return lines.join("\n") + "\n";
-}
-
-/** plugin/tool_schemas.json: full schema for the Revit chat panel, sorted by name. */
-export function formatToolSchemasJson(tools) {
-  const jsonSchemas = [...tools]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((t) => ({
-      name: t.name,
-      description: t.description || "",
-      input_schema: t.inputSchema || { type: "object", properties: {} },
-    }));
-  return JSON.stringify(jsonSchemas, null, 2) + "\n";
 }

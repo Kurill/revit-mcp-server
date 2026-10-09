@@ -28,7 +28,7 @@ flowchart LR
 | Component | Language | Role |
 |-----------|----------|------|
 | MCP server (`server/`) | TypeScript | Turns tool calls into JSON-RPC requests to the add-in |
-| Revit add-in (`plugin/`) | C# | Listens on `127.0.0.1`, port 8080 (8081–8089 if taken); ribbon buttons and a built-in chat panel |
+| Revit add-in (`plugin/`) | C# | Starts with Revit and listens on `127.0.0.1`, port 8080 (8081–8089 if taken) until Revit closes. No ribbon buttons |
 | Command set (`commandset/`) | C# | One command per tool, run on Revit's API thread |
 
 ## Safety
@@ -37,7 +37,7 @@ The AI works on the live model. These rules hold for every tool:
 
 - **Dry run first.** Tools that change many elements at once (`import_from_excel`, `bulk_modify_parameter_values`, `clear_parameter_values`, `delete_element`, `wipe_empty_tags`, `purge_unused`, `manage_unplaced_views`) default to `dryRun=true` and return what would change: element, parameter, old value → new value. Nothing is written until the agent calls again with `dryRun=false`. The site/MEP tools accept `dryRun` too, but default to running.
 - **Revit asks you.** Deletes, bulk parameter writes, Excel import, workset/phase/type changes and purges show a Revit dialog with the number of affected elements; the default button is No. The command waits up to 120 s for your answer.
-- **You see the code before it runs.** `send_code_to_revit` (runs C# inside Revit) is enabled by default, and every run shows the code in a dialog first. Turn it off in *Settings → Command Set* if you do not need it.
+- **You see the code before it runs.** `send_code_to_revit` runs C# inside Revit; every run shows the code in a dialog first, and nothing runs unless you click Yes.
 - **A result is the real result.** Each call waits for its own run and reports its own outcome. If Revit rolls a transaction back (failure handling, or you cancel an error dialog), the tool reports an error instead of success. While a timed-out call is still pending in Revit (for example behind an open dialog), the same tool refuses new calls.
 - **Units are explicit.** Excel import and bulk edits write values in the project's display units, the same form `export_to_excel` produces. `set_element_parameters` takes plain numbers in Revit internal units (feet, radians), as `get_element_parameters` returns them, or a string with a unit such as `"3000 mm"`. `export_room_data` returns m², m³ and m.
 - **Exports cannot overwrite your models.** Export paths must be absolute and end in the format's extension (`.xlsx`, `.csv`/`.txt`/`.tsv`, `.ifc`, …).
@@ -52,7 +52,6 @@ Still work on a **detached copy** of a project model until you trust a workflow,
 | Autodesk Revit | 2023, 2024, 2025, 2026 or 2027 |
 | OS | Windows 10/11 |
 | Node.js | 18+ (the installer offers to install it, or uses a bundled portable copy) |
-| Anthropic API key | Only for the built-in chat panel |
 
 ## Install
 
@@ -85,9 +84,9 @@ Installed layout:
 %APPDATA%\Autodesk\Revit\Addins\2025\
 ├── mcp-servers-for-revit.addin
 └── revit_mcp_plugin\
-    ├── RevitMCPPlugin.dll, RevitMCPSDK.dll, Newtonsoft.Json.dll, tool_schemas.json
+    ├── RevitMCPPlugin.dll, RevitMCPSDK.dll, Newtonsoft.Json.dll
     └── Commands\
-        ├── commandRegistry.json             <- which commands are enabled
+        ├── commandRegistry.json             <- commands the add-in loads
         └── RevitMCPCommandSet\
             ├── 2025\RevitMCPCommandSet.dll
             └── server\build\index.js        <- the MCP server
@@ -113,13 +112,7 @@ Use the server from the plugin folder. The `mcp-server-for-revit` package on npm
 
 ## Use
 
-1. Open the model in Revit.
-2. The server starts automatically when Revit loads. **Add-Ins → Revit MCP Plugin → Revit MCP Switch** stops it or starts it again; the indicator is green while it runs.
-3. Ask your MCP client, or use the **MCP Panel** button for the chat inside Revit.
-
-**Settings → Command Set** turns individual tools on and off. Turn off what a workflow does not need.
-
-The built-in chat panel calls the Anthropic API directly. Set the key in the panel's settings: it is stored in plain text, either in the user environment variable `ANTHROPIC_API_KEY` or in `%USERPROFILE%\.claude\api_key.txt`.
+Open the model in Revit and ask your MCP client. The add-in has no buttons: its server starts once Revit has loaded and stays up until Revit closes. Its log is in `revit_mcp_plugin\logs\` next to the `.addin` file.
 
 The full tool reference with parameters and examples is in [COMMANDS.md](COMMANDS.md).
 
@@ -138,10 +131,10 @@ The full tool reference with parameters and examples is in [COMMANDS.md](COMMAND
 
 | Problem | Fix |
 |---------|-----|
-| Only the Switch button in the ribbon | Source code was copied instead of a release ZIP, or files are missing. Uninstall and install from a release |
+| Nothing answers after install | Source code was copied instead of a release ZIP, or files are missing. Uninstall and install from a release |
 | Add-in missing from Add-Ins | `mcp-servers-for-revit.addin` must sit directly in `Addins\<year>\`, and the ZIP year must match Revit |
-| Client says "connection refused" | Revit open, server running (green; use the Switch if it was stopped). Another program may hold 8080–8089: `netstat -ano \| findstr :808` |
-| A tool is "not found" | It is disabled in *Settings → Command Set* |
+| Client says "connection refused" | Revit must be open and fully loaded; the add-in log says whether the server started. Another program may hold 8080–8089: `netstat -ano \| findstr :808` |
+| A tool is "not found" | The installed `commandRegistry.json` is older than the server. Reinstall the plugin |
 | "previous call timed out and is still pending" | A Revit dialog is waiting for you, or Revit is still working. Answer it, check the model, then retry |
 | Tool list in Claude Desktop is stale | Restart Claude Desktop |
 
@@ -153,7 +146,7 @@ More in [INSTALLATION.md](INSTALLATION.md); `scripts\diagnose.ps1` checks an ins
 cd server && npm ci && npm run build && npm test
 ```
 
-`npm run build` regenerates `tool-schemas.txt` and `plugin/tool_schemas.json`; commit them with any tool change.
+`npm run build` regenerates `tool-schemas.txt`; commit it with any tool change.
 
 Open `mcp-servers-for-revit.sln` in Visual Studio 2022 or use `dotnet build`. Configurations `Debug|Release R23` … `R27`:
 
@@ -185,7 +178,7 @@ git push origin main --tags
 | Roman Zarkhin | First MCP server for Revit — [romanzarkhin/revit-mcp](https://github.com/romanzarkhin/revit-mcp) |
 | [mcp-servers-for-revit](https://github.com/mcp-servers-for-revit) community | Expanded it to 80+ tools across three repos |
 | [sparx-fire](https://sparx-fire.com) (Bobby Galli) | Merged them into one solution |
-| [LuDattilo](https://github.com/LuDattilo/revit-mcp-server) | Language-independent operation, chat panel, PowerShell installer — the base of this fork |
+| [LuDattilo](https://github.com/LuDattilo/revit-mcp-server) | Language-independent operation, PowerShell installer — the base of this fork |
 | jhsmith409, xedoevgeniy-code | Upstream PRs merged here |
 
 ## License

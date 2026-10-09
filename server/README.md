@@ -8,7 +8,7 @@ The release ZIPs bundle a built copy of this server under `revit_mcp_plugin\Comm
 
 ```bash
 npm ci
-npm run build   # also regenerates tool-schemas.txt and plugin/tool_schemas.json
+npm run build   # also regenerates tool-schemas.txt
 npm test
 ```
 

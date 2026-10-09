@@ -415,10 +415,10 @@ foreach ($year in $REVIT_YEARS) {
             $enabledCount = ($reg.Commands | Where-Object { $_.Enabled }).Count
             if ($totalCount -eq 0) {
                 Fail "  commandRegistry.json is EMPTY (no commands)"
-                Info "  Open Revit -> Add-Ins -> Settings -> Select All -> Save"
+                Info "  Reinstall the plugin"
             } elseif ($enabledCount -eq 0) {
                 Warn "  commandRegistry.json has $totalCount commands but ALL DISABLED"
-                Info "  Open Revit -> Add-Ins -> Settings -> Select All -> Save"
+                Info "  Reinstall the plugin"
             } else {
                 Pass "  commandRegistry.json: $enabledCount/$totalCount commands enabled"
             }
@@ -472,7 +472,7 @@ if ($revitProcs) {
     }
 } else {
     Fail "Revit is NOT running"
-    Info "Start Revit and click Add-Ins -> Revit MCP Switch before using Claude"
+    Info "Start Revit before using Claude; the MCP server starts with it"
 }
 
 
@@ -536,7 +536,7 @@ try {
                 }
             } else {
                 Fail "No response within 5 seconds"
-                Info "Make sure 'Revit MCP Switch' is ON in Revit (Add-Ins tab)"
+                Info "Restart Revit; the MCP server starts once Revit has loaded"
             }
             $stream.Close(); $tcp2.Close()
         } catch {
@@ -547,9 +547,9 @@ try {
         Fail "Port $MCP_PORT is CLOSED -- plugin server NOT listening"
         if ($revitProcs) {
             Info "Revit is running but MCP server not started"
-            Info "-> In Revit: Add-Ins tab -> click 'Revit MCP Switch'"
+            Info "-> Restart Revit; the MCP server starts once Revit has loaded"
         } else {
-            Info "-> Start Revit first, then click 'Revit MCP Switch'"
+            Info "-> Start Revit; the MCP server starts once Revit has loaded"
         }
     }
 } catch {

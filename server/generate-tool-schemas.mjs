@@ -8,12 +8,11 @@ import { spawn } from "child_process";
 import { writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { formatToolSchemasTxt, formatToolSchemasJson } from "./tool-schema-format.mjs";
+import { formatToolSchemasTxt } from "./tool-schema-format.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverEntry = join(__dirname, "build", "index.js");
 const outputPath = join(__dirname, "..", "tool-schemas.txt");
-const jsonOutputPath = join(__dirname, "..", "plugin", "tool_schemas.json");
 
 const child = spawn(process.execPath, [serverEntry], {
   stdio: ["pipe", "pipe", "pipe"],
@@ -66,8 +65,4 @@ child.on("close", () => {
   // compare the committed files against the live registration.
   writeFileSync(outputPath, formatToolSchemasTxt(tools));
   console.log(`Generated ${outputPath} with ${tools.length} tools`);
-
-  // Also generate plugin/tool_schemas.json (full schema for Revit chat panel)
-  writeFileSync(jsonOutputPath, formatToolSchemasJson(tools));
-  console.log(`Generated ${jsonOutputPath} with ${tools.length} tools`);
 });

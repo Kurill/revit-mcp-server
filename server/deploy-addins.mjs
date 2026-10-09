@@ -14,7 +14,6 @@ const SOURCE_BUILD = join(import.meta.dirname, "build", "index.js");
 const SOURCE_WASM = join(import.meta.dirname, "build", "sql-wasm.wasm");
 const SOURCE_PACKAGE_JSON = join(import.meta.dirname, "package.json");
 const SOURCE_SCHEMAS = join(import.meta.dirname, "..", "tool-schemas.txt");
-const SOURCE_JSON_SCHEMAS = join(import.meta.dirname, "..", "plugin", "tool_schemas.json");
 
 // Standalone runs before `npm run build` used to seed an empty server/build in
 // the add-in and then report "No Revit addins folders found". Fail early instead.
@@ -60,10 +59,6 @@ for (const year of YEARS) {
     }
     if (existsSync(SOURCE_SCHEMAS)) {
       cpSync(SOURCE_SCHEMAS, join(targetDir, "tool-schemas.txt"));
-    }
-    // Deploy tool_schemas.json to plugin root (sibling of Commands/)
-    if (existsSync(SOURCE_JSON_SCHEMAS)) {
-      cpSync(SOURCE_JSON_SCHEMAS, join(pluginRoot, "tool_schemas.json"));
     }
     deployed++;
     console.error(`Deployed to Revit ${year} addins`);

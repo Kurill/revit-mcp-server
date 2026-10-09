@@ -741,9 +741,8 @@ Write-Host "  ================================================================" 
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor White
 Write-Host "    1. Open (or restart) Revit"                                     -ForegroundColor Gray
-Write-Host "    2. Go to the Add-Ins tab  --  you will see the Revit MCP panel"    -ForegroundColor Gray
-Write-Host "    3. Click 'Revit MCP Switch' to start the local server"          -ForegroundColor Gray
-Write-Host "    4. Open Claude Desktop / Claude Code and start chatting"        -ForegroundColor Gray
+Write-Host "    2. The MCP server starts once Revit has loaded"                 -ForegroundColor Gray
+Write-Host "    3. Open Claude Desktop / Claude Code and start chatting"        -ForegroundColor Gray
 Write-Host ""
 Write-Host "  Docs:   https://github.com/$REPO#readme"   -ForegroundColor DarkGray
 Write-Host "  Issues: https://github.com/$REPO/issues"   -ForegroundColor DarkGray
