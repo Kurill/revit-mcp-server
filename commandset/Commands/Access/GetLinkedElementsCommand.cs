@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class GetLinkedElementsCommand : ExternalEventCommandBase
+    public class GetLinkedElementsCommand : GuardedCommandBase
     {
         private GetLinkedElementsEventHandler _handler => (GetLinkedElementsEventHandler)Handler;
         public override string CommandName => "get_linked_elements";
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.Access
         public GetLinkedElementsCommand(UIApplication uiApp)
             : base(new GetLinkedElementsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

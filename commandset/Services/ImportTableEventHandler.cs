@@ -6,9 +6,10 @@ using System.IO;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class ImportTableEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ImportTableEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string FilePath { get; private set; }
         public string Delimiter { get; private set; }

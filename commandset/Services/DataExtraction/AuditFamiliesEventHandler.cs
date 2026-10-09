@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class AuditFamiliesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class AuditFamiliesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public bool IncludeUnused { get; set; } = true;
         public string CategoryFilter { get; set; } = "";
@@ -18,6 +18,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 60000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

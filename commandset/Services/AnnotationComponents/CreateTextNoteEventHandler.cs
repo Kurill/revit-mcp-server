@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.AnnotationComponents
 {
-    public class CreateTextNoteEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateTextNoteEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<TextNoteData> TextNotes { get; set; }
         public AIResult<List<object>> Result { get; private set; }

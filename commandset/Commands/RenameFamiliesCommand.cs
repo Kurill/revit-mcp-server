@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class RenameFamiliesCommand : ExternalEventCommandBase
+    public class RenameFamiliesCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private RenameFamiliesEventHandler _handler => (RenameFamiliesEventHandler)Handler;
@@ -19,7 +20,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPSDK.API.Base;
@@ -9,7 +10,7 @@ namespace RevitMCPCommandSet.Commands.Architecture
     /// <summary>
     /// Command to create and place rooms in Revit
     /// </summary>
-    public class CreateRoomCommand : ExternalEventCommandBase
+    public class CreateRoomCommand : GuardedCommandBase
     {
         private CreateRoomEventHandler _handler => (CreateRoomEventHandler)Handler;
 
@@ -27,7 +28,7 @@ namespace RevitMCPCommandSet.Commands.Architecture
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

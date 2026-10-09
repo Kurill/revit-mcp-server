@@ -23,7 +23,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public string Name { get; set; }
     }
 
-    public class SetMaterialPropertiesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SetMaterialPropertiesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<SetMaterialRequest> Requests { get; set; } = new List<SetMaterialRequest>();
         public bool DryRun { get; set; } = true;
@@ -31,6 +31,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

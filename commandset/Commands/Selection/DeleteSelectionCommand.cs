@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -6,7 +7,7 @@ using System;
 
 namespace RevitMCPCommandSet.Commands.Selection
 {
-    public class DeleteSelectionCommand : ExternalEventCommandBase
+    public class DeleteSelectionCommand : GuardedCommandBase
     {
         private DeleteSelectionEventHandler _handler => (DeleteSelectionEventHandler)Handler;
 
@@ -15,7 +16,7 @@ namespace RevitMCPCommandSet.Commands.Selection
         public DeleteSelectionCommand(UIApplication uiApp)
             : base(new DeleteSelectionEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class GetRoomOpeningsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetRoomOpeningsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<long> RoomIds { get; set; } = new List<long>();
         public List<string> RoomNumbers { get; set; } = new List<string>();
@@ -25,6 +25,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

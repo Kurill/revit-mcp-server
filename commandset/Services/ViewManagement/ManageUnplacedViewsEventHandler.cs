@@ -9,9 +9,10 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class ManageUnplacedViewsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ManageUnplacedViewsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Action { get; private set; } = "list";
         public List<string> ViewTypes { get; private set; } = new List<string>();

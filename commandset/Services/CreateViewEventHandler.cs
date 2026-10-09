@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateViewEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateViewEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public ViewCreationInfo ViewInfo { get; set; }
         public AIResult<object> Result { get; private set; }

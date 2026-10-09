@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class OperateElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class OperateElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -21,6 +21,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait handle
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
         /// <summary>
         /// Creation data (input data)
         /// </summary>

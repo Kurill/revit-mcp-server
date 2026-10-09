@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class GetSelectedElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetSelectedElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         // Execution result
         public List<Models.Common.ElementInfo> ResultElements { get; private set; }
@@ -17,6 +17,7 @@ namespace RevitMCPCommandSet.Services
         // State synchronization object
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Limit the number of returned elements
         public int? Limit { get; set; }

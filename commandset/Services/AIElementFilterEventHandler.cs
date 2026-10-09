@@ -17,7 +17,7 @@ using System.Xml;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class AIElementFilterEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class AIElementFilterEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -27,6 +27,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait handle
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
         /// <summary>
         /// Filter data (input data)
         /// </summary>

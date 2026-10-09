@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.SheetManagement
 {
-    public class DuplicateSheetWithContentEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class DuplicateSheetWithContentEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public long SheetId { get; set; }
         public int Copies { get; set; } = 1;
@@ -23,6 +23,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

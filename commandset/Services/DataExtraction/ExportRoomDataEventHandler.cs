@@ -5,7 +5,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ExportRoomDataEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExportRoomDataEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private bool _includeUnplacedRooms;
         private bool _includeNotEnclosedRooms;
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public object ResultInfo { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // All available field names for validation
         private static readonly HashSet<string> AllFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

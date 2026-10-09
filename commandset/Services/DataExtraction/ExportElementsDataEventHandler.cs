@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ExportElementsDataEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExportElementsDataEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         // Input parameters
         public List<string> Categories { get; set; } = new List<string>();
@@ -27,6 +27,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(
             List<string> categories,

@@ -4,7 +4,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class GetCurrentViewInfoEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetCurrentViewInfoEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         // Execution result
         public CurrentViewInfo ResultInfo { get; private set; }
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services
         // State synchronization object
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Set query parameters
         public void SetParameters()

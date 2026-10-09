@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ManageProjectParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ManageProjectParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public string Action { get; set; } = "list";
         public string ParameterName { get; set; } = "";
@@ -23,6 +23,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(string action, string parameterName, string dataType, string groupUnder,
             bool isInstance, List<string> categories, bool isShared)

@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.SheetManagement
 {
-    public class AlignViewportsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class AlignViewportsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public long SourceViewportId { get; set; }
         public List<long> TargetViewportIds { get; set; } = new List<long>();
@@ -18,6 +18,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 15000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class ExportSharedParameterFileCommand : ExternalEventCommandBase
+    public class ExportSharedParameterFileCommand : GuardedCommandBase
     {
         private ExportSharedParameterFileEventHandler _handler => (ExportSharedParameterFileEventHandler)Handler;
         public override string CommandName => "export_shared_parameter_file";
@@ -14,7 +15,7 @@ namespace RevitMCPCommandSet.Commands.Access
         public ExportSharedParameterFileCommand(UIApplication uiApp)
             : base(new ExportSharedParameterFileEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

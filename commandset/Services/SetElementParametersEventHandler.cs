@@ -7,9 +7,10 @@ using Newtonsoft.Json.Linq;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class SetElementParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SetElementParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<SetParameterRequest> Requests { get; set; }
         public AIResult<List<SetParameterResult>> Result { get; private set; }

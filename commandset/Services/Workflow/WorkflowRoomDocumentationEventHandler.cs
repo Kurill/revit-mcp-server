@@ -9,9 +9,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.Workflow
 {
-    public class WorkflowRoomDocumentationEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class WorkflowRoomDocumentationEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string LevelName { get; set; } = "";
         public bool CreateSections { get; set; } = true;

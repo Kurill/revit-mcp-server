@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -7,7 +8,7 @@ using System.Linq;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class CheckFamilyHealthCommand : ExternalEventCommandBase
+    public class CheckFamilyHealthCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CheckFamilyHealthEventHandler _handler => (CheckFamilyHealthEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public CheckFamilyHealthCommand(UIApplication uiApp)
             : base(new CheckFamilyHealthEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

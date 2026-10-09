@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.ViewManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class SetViewCropCommand : ExternalEventCommandBase
+    public class SetViewCropCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private SetViewCropEventHandler _handler => (SetViewCropEventHandler)Handler;
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public SetViewCropCommand(UIApplication uiApp)
             : base(new SetViewCropEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

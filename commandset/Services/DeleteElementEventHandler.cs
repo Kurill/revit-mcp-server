@@ -6,7 +6,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class DeleteElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class DeleteElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         // Execution result
         public bool IsSuccess { get; private set; }
@@ -23,6 +23,7 @@ namespace RevitMCPCommandSet.Services
         // State synchronization object
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
         // Element ID array to delete
         public string[] ElementIds { get; set; }
         // If true, only preview what would be deleted without actually deleting

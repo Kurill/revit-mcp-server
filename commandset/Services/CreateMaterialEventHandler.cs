@@ -8,9 +8,10 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateMaterialEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateMaterialEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string MaterialName { get; set; }
         public string DuplicateFrom { get; set; }

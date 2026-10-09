@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class SetElementPhaseEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SetElementPhaseEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<SetElementPhaseRequest> Requests { get; set; }
         public AIResult<List<SetElementPhaseResult>> Result { get; private set; }

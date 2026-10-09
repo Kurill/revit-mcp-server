@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Workflow
 {
-    public class WorkflowRoomDocumentationCommand : ExternalEventCommandBase
+    public class WorkflowRoomDocumentationCommand : GuardedCommandBase
     {
         private WorkflowRoomDocumentationEventHandler _handler => (WorkflowRoomDocumentationEventHandler)Handler;
         public override string CommandName => "workflow_room_documentation";
@@ -14,7 +15,7 @@ namespace RevitMCPCommandSet.Commands.Workflow
         public WorkflowRoomDocumentationCommand(UIApplication uiApp)
             : base(new WorkflowRoomDocumentationEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

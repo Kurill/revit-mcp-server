@@ -10,9 +10,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.Workflow
 {
-    public class WorkflowDataRoundtripEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class WorkflowDataRoundtripEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Input parameters
         public List<string> Categories { get; set; } = new();

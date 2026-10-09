@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class GetElementsInSpatialVolumeCommand : ExternalEventCommandBase
+    public class GetElementsInSpatialVolumeCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private GetElementsInSpatialVolumeEventHandler _handler => (GetElementsInSpatialVolumeEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public GetElementsInSpatialVolumeCommand(UIApplication uiApp)
             : base(new GetElementsInSpatialVolumeEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

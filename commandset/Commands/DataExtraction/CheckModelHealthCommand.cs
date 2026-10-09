@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class CheckModelHealthCommand : ExternalEventCommandBase
+    public class CheckModelHealthCommand : GuardedCommandBase
     {
         private CheckModelHealthEventHandler _handler => (CheckModelHealthEventHandler)Handler;
 
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

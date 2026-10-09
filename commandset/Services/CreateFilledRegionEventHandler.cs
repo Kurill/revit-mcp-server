@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateFilledRegionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateFilledRegionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<Dictionary<string, double>> BoundaryPoints { get; set; } = new List<Dictionary<string, double>>();
         public long ViewId { get; set; } = 0;

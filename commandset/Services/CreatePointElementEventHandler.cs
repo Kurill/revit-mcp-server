@@ -5,7 +5,7 @@ using RevitMCPCommandSet.Utils;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreatePointElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreatePointElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -16,6 +16,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait handle
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
         /// <summary>
         /// Creation data (input data)
         /// </summary>

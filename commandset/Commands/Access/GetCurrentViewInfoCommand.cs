@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class GetCurrentViewInfoCommand : ExternalEventCommandBase
+    public class GetCurrentViewInfoCommand : GuardedCommandBase
     {
         private GetCurrentViewInfoEventHandler _handler => (GetCurrentViewInfoEventHandler)Handler;
 
@@ -22,7 +22,7 @@ namespace RevitMCPCommandSet.Commands.Access
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             // Raise external event and wait for completion
             if (RaiseAndWaitForCompletion(10000)) // 10 second timeout

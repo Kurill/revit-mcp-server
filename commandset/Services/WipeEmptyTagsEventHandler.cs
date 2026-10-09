@@ -5,7 +5,7 @@ using RevitMCPCommandSet.Helpers;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class WipeEmptyTagsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class WipeEmptyTagsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public bool DryRun { get; set; } = true;
         public int? ViewId { get; set; }
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services
         public string ErrorMessage { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {

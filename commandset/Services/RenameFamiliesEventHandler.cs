@@ -10,9 +10,10 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class RenameFamiliesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class RenameFamiliesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Operation { get; set; } = "prefix";
         public string Prefix { get; set; } = "";

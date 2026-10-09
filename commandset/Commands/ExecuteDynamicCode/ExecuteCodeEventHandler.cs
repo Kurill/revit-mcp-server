@@ -11,7 +11,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
     /// <summary>
     /// External event handler for code execution
     /// </summary>
-    public class ExecuteCodeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExecuteCodeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public const string TransactionModeAuto = "auto";
         public const string TransactionModeNone = "none";
@@ -27,6 +27,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
         // State synchronization
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Set code and parameters for execution
         public void SetExecutionParameters(string code, object[] parameters = null, string transactionMode = TransactionModeAuto)

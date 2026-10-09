@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -11,7 +12,7 @@ namespace RevitMCPCommandSet.Commands.SiteMep
     /// <see cref="SiteMepEventHandler"/> per command, a per-command lock so concurrent
     /// requests do not overwrite each other's work item, and a timeout per tool.
     /// </summary>
-    public abstract class SiteMepCommandBase : ExternalEventCommandBase
+    public abstract class SiteMepCommandBase : GuardedCommandBase
     {
         private readonly object _executionLock = new object();
 
@@ -36,7 +37,7 @@ namespace RevitMCPCommandSet.Commands.SiteMep
             return parameters == null ? new T() : parameters.ToObject<T>() ?? new T();
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

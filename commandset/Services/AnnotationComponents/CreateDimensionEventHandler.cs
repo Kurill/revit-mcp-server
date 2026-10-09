@@ -32,7 +32,7 @@ namespace RevitMCPCommandSet.Services.AnnotationComponents;
 /// <summary>
 ///     Handles creation of dimension elements in Revit
 /// </summary>
-public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
 {
     #region Fields
 
@@ -40,6 +40,7 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
     private UIDocument UiDoc => _uiApp.ActiveUIDocument;
     private Document Doc => UiDoc.Document;
     private readonly ManualResetEvent _resetEvent = new(false);
+    public ManualResetEvent CompletionSignal => _resetEvent;
     private const double MILLIMETERS_TO_FEET = 1.0 / 304.8;
 
     #endregion

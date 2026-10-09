@@ -9,9 +9,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ImportFromExcelEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ImportFromExcelEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string FilePath { get; set; } = "";
         public string SheetName { get; set; } = "";

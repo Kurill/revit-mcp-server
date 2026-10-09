@@ -6,7 +6,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.SheetManagement
 {
-    public class BatchCreateSheetsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class BatchCreateSheetsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private List<SheetDefinition> _sheets;
         private string _defaultTitleBlockName;
@@ -14,6 +14,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(List<SheetDefinition> sheets, string defaultTitleBlockName)
         {

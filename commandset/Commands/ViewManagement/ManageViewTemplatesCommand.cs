@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class ManageViewTemplatesCommand : ExternalEventCommandBase
+    public class ManageViewTemplatesCommand : GuardedCommandBase
     {
         private ManageViewTemplatesEventHandler _handler => (ManageViewTemplatesEventHandler)Handler;
         public override string CommandName => "manage_view_templates";
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public ManageViewTemplatesCommand(UIApplication uiApp)
             : base(new ManageViewTemplatesEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

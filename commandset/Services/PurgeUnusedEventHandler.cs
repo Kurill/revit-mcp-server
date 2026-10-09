@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class PurgeUnusedEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class PurgeUnusedEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool DryRun { get; set; } = true;
         public int MaxElements { get; set; } = 500;

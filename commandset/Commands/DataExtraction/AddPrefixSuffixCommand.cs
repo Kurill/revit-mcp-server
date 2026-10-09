@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class AddPrefixSuffixCommand : ExternalEventCommandBase
+    public class AddPrefixSuffixCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private AddPrefixSuffixEventHandler _handler => (AddPrefixSuffixEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public AddPrefixSuffixCommand(UIApplication uiApp)
             : base(new AddPrefixSuffixEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Workflow
 {
-    public class WorkflowModelAuditCommand : ExternalEventCommandBase
+    public class WorkflowModelAuditCommand : GuardedCommandBase
     {
         private WorkflowModelAuditEventHandler _handler => (WorkflowModelAuditEventHandler)Handler;
         public override string CommandName => "workflow_model_audit";
@@ -14,7 +15,7 @@ namespace RevitMCPCommandSet.Commands.Workflow
         public WorkflowModelAuditCommand(UIApplication uiApp)
             : base(new WorkflowModelAuditEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

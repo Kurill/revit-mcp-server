@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Workflow
 {
-    public class WorkflowDataRoundtripCommand : ExternalEventCommandBase
+    public class WorkflowDataRoundtripCommand : GuardedCommandBase
     {
         private WorkflowDataRoundtripEventHandler _handler => (WorkflowDataRoundtripEventHandler)Handler;
         public override string CommandName => "workflow_data_roundtrip";
@@ -14,7 +15,7 @@ namespace RevitMCPCommandSet.Commands.Workflow
         public WorkflowDataRoundtripCommand(UIApplication uiApp)
             : base(new WorkflowDataRoundtripEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

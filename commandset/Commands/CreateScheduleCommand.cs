@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Models.Views;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class CreateScheduleCommand : ExternalEventCommandBase
+    public class CreateScheduleCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CreateScheduleEventHandler _handler => (CreateScheduleEventHandler)Handler;
@@ -18,7 +19,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
