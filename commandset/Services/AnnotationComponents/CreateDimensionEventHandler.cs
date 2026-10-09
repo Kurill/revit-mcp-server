@@ -136,6 +136,7 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
                         {
                             // Create dimension between elements
                             var dimensionDirection = (endPoint - startPoint).Normalize();
+                            var anchors = new[] { startPoint, endPoint };
                             var references = new ReferenceArray();
                             foreach (var elementId in dimInfo.ElementIds)
                             {
@@ -143,7 +144,7 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
                                 if (element != null)
                                 {
                                     // Get appropriate reference for this element
-                                    foreach (var reference in GetReferences(element, view, dimensionDirection))
+                                    foreach (var reference in GetReferences(element, view, dimensionDirection, anchors, dimInfo.WallFace))
                                     {
                                         references.Append(reference);
                                     }
@@ -165,8 +166,8 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
 
                             // Pick references from geometry in the view at those points
                             var refArray = new ReferenceArray();
-                            var startRef = FindReferenceAtPoint(view, startPoint, dimDirection);
-                            var endRef = FindReferenceAtPoint(view, endPoint, dimDirection);
+                            var startRef = FindReferenceAtPoint(view, startPoint, dimDirection, dimInfo.WallFace);
+                            var endRef = FindReferenceAtPoint(view, endPoint, dimDirection, dimInfo.WallFace);
 
                             if (startRef != null && endRef != null)
                             {
@@ -258,14 +259,41 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
     /// <param name="element">Element to get references for</param>
     /// <param name="view">View context</param>
     /// <param name="dimensionDirection">Direction of the dimension line (used to pick correct wall face)</param>
+    /// <param name="anchors">Points the caller placed on the intended faces; the closest parallel face wins</param>
+    /// <param name="wallFace">"nearest" (default), "interior" or "exterior"</param>
     /// <returns>List of references</returns>
-    private List<Reference> GetReferences(Element element, View view, XYZ dimensionDirection = null)
+    private List<Reference> GetReferences(Element element, View view, XYZ dimensionDirection = null,
+        IList<XYZ> anchors = null, string wallFace = "nearest")
     {
         var references = new List<Reference>();
 
         // Handle different element types
         if (element is Wall wall)
         {
+            // Interior/exterior side faces come straight from the wall's shell layers
+            var side = (wallFace ?? "nearest").ToLowerInvariant();
+            if (side == "interior" || side == "exterior")
+            {
+                try
+                {
+                    var sideRefs = HostObjectUtils.GetSideFaces(wall,
+                        side == "interior" ? ShellLayerType.Interior : ShellLayerType.Exterior);
+                    // A side face only works when it is perpendicular to the dimension line;
+                    // a dimension along the wall, or a curved wall, falls through to nearest.
+                    var sideFace = sideRefs.Count > 0 ? wall.GetGeometryObjectFromReference(sideRefs[0]) as PlanarFace : null;
+                    if (sideFace != null &&
+                        (dimensionDirection == null || Math.Abs(sideFace.FaceNormal.DotProduct(dimensionDirection)) > 0.99))
+                    {
+                        references.Add(sideRefs[0]);
+                        return references;
+                    }
+                }
+                catch (Autodesk.Revit.Exceptions.ArgumentException)
+                {
+                    // Curtain walls and similar have no shell layers - fall through to nearest
+                }
+            }
+
             // Get wall faces or edges for dimensioning
             var options = new Options();
             options.View = view;
@@ -275,46 +303,14 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
 
             if (geometry != null)
             {
-                Reference bestRef = null;
-                double bestAlignment = -1;
-
+                var faces = new List<PlanarFace>();
                 foreach (var obj in geometry)
                 {
                     if (obj is Solid solid && solid.Faces.Size > 0)
-                    {
-                        foreach (Face face in solid.Faces)
-                        {
-                            if (face is PlanarFace planarFace)
-                            {
-                                var normal = planarFace.FaceNormal;
-
-                                // Skip horizontal faces (top/bottom of wall) - useless in plan view
-                                if (Math.Abs(normal.Z) > 0.9)
-                                    continue;
-
-                                if (dimensionDirection != null)
-                                {
-                                    // Find face whose normal is most parallel to the dimension direction.
-                                    // For a horizontal dim between two vertical walls, we want the
-                                    // wall faces whose normals point along the dim direction.
-                                    double alignment = Math.Abs(normal.DotProduct(dimensionDirection));
-                                    if (alignment > bestAlignment)
-                                    {
-                                        bestAlignment = alignment;
-                                        bestRef = face.Reference;
-                                    }
-                                }
-                                else
-                                {
-                                    // Without direction info, take first vertical face
-                                    references.Add(face.Reference);
-                                    return references;
-                                }
-                            }
-                        }
-                    }
+                        CollectVerticalPlanarFaces(solid, faces);
                 }
 
+                var bestRef = PickFaceReference(faces, dimensionDirection, anchors);
                 if (bestRef != null)
                 {
                     references.Add(bestRef);
@@ -337,42 +333,22 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
             var geometry = familyInstance.get_Geometry(options);
             if (geometry != null && dimensionDirection != null)
             {
-                Reference bestRef = null;
-                double bestAlignment = -1;
-
+                var faces = new List<PlanarFace>();
                 foreach (var obj in geometry)
                 {
-                    var solids = new List<Solid>();
                     if (obj is Solid s && s.Faces.Size > 0)
-                        solids.Add(s);
+                        CollectVerticalPlanarFaces(s, faces);
                     else if (obj is GeometryInstance gi)
                     {
                         foreach (var subObj in gi.GetInstanceGeometry())
                         {
                             if (subObj is Solid ss && ss.Faces.Size > 0)
-                                solids.Add(ss);
-                        }
-                    }
-
-                    foreach (var solid in solids)
-                    {
-                        foreach (Face face in solid.Faces)
-                        {
-                            if (face is PlanarFace planarFace)
-                            {
-                                if (Math.Abs(planarFace.FaceNormal.Z) > 0.9)
-                                    continue;
-                                double alignment = Math.Abs(planarFace.FaceNormal.DotProduct(dimensionDirection));
-                                if (alignment > bestAlignment)
-                                {
-                                    bestAlignment = alignment;
-                                    bestRef = face.Reference;
-                                }
-                            }
+                                CollectVerticalPlanarFaces(ss, faces);
                         }
                     }
                 }
 
+                var bestRef = PickFaceReference(faces, dimensionDirection, anchors);
                 if (bestRef != null)
                 {
                     references.Add(bestRef);
@@ -392,6 +368,59 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
         return references;
     }
 
+    private static void CollectVerticalPlanarFaces(Solid solid, List<PlanarFace> faces)
+    {
+        foreach (Face face in solid.Faces)
+        {
+            // Skip horizontal faces (top/bottom) - useless in plan view
+            if (face is PlanarFace planarFace && face.Reference != null && Math.Abs(planarFace.FaceNormal.Z) <= 0.9)
+                faces.Add(planarFace);
+        }
+    }
+
+    /// <summary>
+    ///     Picks the face whose normal is most parallel to the dimension direction.
+    ///     An element usually has two such faces (e.g. both sides of a wall), so ties are
+    ///     broken by distance to the anchor points - the caller's start/end points mark
+    ///     which face they mean.
+    /// </summary>
+    private static Reference PickFaceReference(List<PlanarFace> faces, XYZ dimensionDirection, IList<XYZ> anchors)
+    {
+        if (faces.Count == 0)
+            return null;
+
+        // Without direction info, take first vertical face
+        if (dimensionDirection == null)
+            return faces[0].Reference;
+
+        const double parallelTolerance = 1e-3;
+        var bestAlignment = faces.Max(f => Math.Abs(f.FaceNormal.DotProduct(dimensionDirection)));
+        var candidates = faces
+            .Where(f => Math.Abs(f.FaceNormal.DotProduct(dimensionDirection)) >= bestAlignment - parallelTolerance)
+            .ToList();
+
+        if (anchors == null || anchors.Count == 0 || candidates.Count == 1)
+            return candidates[0].Reference;
+
+        PlanarFace best = null;
+        var bestDistance = double.MaxValue;
+        foreach (var face in candidates)
+        {
+            foreach (var anchor in anchors)
+            {
+                // Distance from the anchor to the face's plane
+                var distance = Math.Abs((anchor - face.Origin).DotProduct(face.FaceNormal));
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = face;
+                }
+            }
+        }
+
+        return best.Reference;
+    }
+
     /// <summary>
     ///     Find a reference at a point in the view
     /// </summary>
@@ -399,7 +428,7 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
     /// <param name="point">Point to search at</param>
     /// <param name="dimensionDirection">Direction of the dimension line</param>
     /// <returns>Reference or null</returns>
-    private Reference FindReferenceAtPoint(View view, XYZ point, XYZ dimensionDirection = null)
+    private Reference FindReferenceAtPoint(View view, XYZ point, XYZ dimensionDirection = null, string wallFace = "nearest")
     {
         // In a non-3D view, we can't easily use ReferenceIntersector
         // Instead, we'll use a different approach based on view type
@@ -455,7 +484,7 @@ public class CreateDimensionEventHandler : IExternalEventHandler, IWaitableExter
             // If we found a close enough element, get a geometric face reference
             if (closestElement != null && minDistance < 5.0) // 5 feet tolerance
             {
-                var refs = GetReferences(closestElement, view, dimensionDirection);
+                var refs = GetReferences(closestElement, view, dimensionDirection, new[] { point }, wallFace);
                 if (refs.Count > 0)
                     return refs[0];
             }

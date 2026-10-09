@@ -85,6 +85,13 @@ public class DimensionCreationInfo
     public int ViewId { get; set; } = -1;
 
     /// <summary>
+    ///     Which wall face to reference: "nearest" (face closest to startPoint/endPoint),
+    ///     "interior" or "exterior"
+    /// </summary>
+    [JsonProperty("wallFace")]
+    public string WallFace { get; set; } = "nearest";
+
+    /// <summary>
     ///     Additional options
     /// </summary>
     [JsonProperty("options")]
