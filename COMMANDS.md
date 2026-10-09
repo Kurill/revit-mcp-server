@@ -1,6 +1,6 @@
 # Revit MCP Server - Complete Reference
 
-> **147 MCP tools** | **156 Revit API tests** | **Revit 2023–2027** | Coordinates in **millimeters (mm)**
+> **150 MCP tools** | **156 Revit API tests** | **Revit 2023–2027** | Coordinates in **millimeters (mm)**
 
 ---
 
@@ -17,7 +17,7 @@
 - [Model Audit & Cleanup](#model-audit--cleanup)
 - [Site, Coordinates, MEP & IFC](#site-coordinates-mep--ifc)
 - [Advanced Automation (New)](#advanced-automation-new)
-- [Chat Panel](#chat-panel)
+- [Checkpoints](#checkpoints)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -32,14 +32,8 @@
 ### Quick Start
 1. Build the plugin: `dotnet build plugin/RevitMCPPlugin.csproj -c "Debug R25"`
 2. Build the MCP server: `cd server && npm run build`
-3. Open Revit and click **"Revit MCP Switch"** in the ribbon
+3. Open Revit; the add-in starts its server once Revit has loaded
 4. Configure Claude Desktop to connect to the MCP server
-
-### Chat Panel (inside Revit)
-The plugin includes a dockable chat panel accessible via **"MCP Panel"** in the ribbon.
-- Calls Anthropic API with 16 Revit tool definitions
-- Executes commands on the model via JSON-RPC (localhost:8080)
-- API key: set `ANTHROPIC_API_KEY` env var or create `%USERPROFILE%\.claude\api_key.txt`
 
 ---
 
@@ -769,22 +763,23 @@ These 15 tools were added based on research of the most commonly automated BIM t
 
 ---
 
-## Chat Panel
+## Checkpoints
 
-The dockable panel inside Revit provides a Claude-style chat interface:
+A checkpoint saves the active model and keeps a full copy of the file in `mcp-checkpoints\<model name>\` next to it; the last 10 are kept. One is made automatically before the first model-changing call every 30 minutes (dry runs and read-only tools do not count). Set the user environment variable `REVIT_MCP_AUTO_CHECKPOINT=0` to turn the automatic ones off. Models in the cloud and models never saved to a file are skipped.
 
-- **UI**: Light theme matching claude.ai (white background, pill-shaped input, Claude orange branding)
-- **API**: Calls Anthropic API (claude-sonnet-4-20250514) with 16 MCP tool definitions
-- **Execution**: When Claude decides to use a tool, it sends JSON-RPC to localhost:8080
-- **Multi-turn**: Supports up to 5 tool execution rounds per message
-- **Setup**: API key via `ANTHROPIC_API_KEY` env var or `~/.claude/api_key.txt`
+### `create_checkpoint`
+```json
+{ "label": "before dimensions" }
+```
 
-### Example prompts for the chat panel:
-- "What project do I have open?"
-- "Run a model audit"
-- "Create a level at 15000mm"
-- "Show me the warnings"
-- "How many structural elements are there?"
+### `list_checkpoints`
+Newest first, with time and size. `_auto` in the name marks an automatic checkpoint.
+
+### `restore_checkpoint`
+Copies the checkpoint to `<model>_restored_<time>.rvt` next to the model and opens it (detached from central for workshared models). The model you were working in stays open; close it without saving to keep the restored copy.
+```json
+{ "checkpoint": "20261009-153012_before_dimensions.rvt" }
+```
 
 ---
 
@@ -810,15 +805,9 @@ Common causes:
 - Fix: Update Revit to latest patch (2025.3+) or update IFC Exporter from Autodesk Desktop App
 
 ### MCP connection failed
-- Ensure "Revit MCP Switch" is clicked (server must be running)
-- Default port: 8080
+- Revit must be open and fully loaded; the add-in log in `revit_mcp_plugin\logs\` says whether the server started
+- Default port: 8080 (8081-8089 if taken)
 - Check Windows Firewall is not blocking localhost connections
-
-### Chat panel shows "API key not configured"
-Create the key file:
-```
-echo sk-ant-YOUR-KEY > %USERPROFILE%\.claude\api_key.txt
-```
 
 ---
 
@@ -826,15 +815,14 @@ echo sk-ant-YOUR-KEY > %USERPROFILE%\.claude\api_key.txt
 
 ```
 mcp-servers-for-revit/
-├── plugin/                    # Revit Plugin (C#/WPF)
-│   ├── Core/                  # Application, SocketService, CommandManager
-│   └── UI/                    # Dockable Panel, Chat UI
+├── plugin/                    # Revit Plugin (C#)
+│   └── Core/                  # Application, SocketService, CommandManager
 ├── commandset/                # MCP Command Set (C#)
 │   ├── Commands/              # 67 command classes
 │   ├── Services/              # 67 event handlers
 │   └── Models/                # Data models
 ├── server/                    # MCP Server (TypeScript)
-│   └── src/tools/             # 147 tool definitions
+│   └── src/tools/             # 150 tool definitions
 ├── tests/                     # Revit API tests (156 tests, TUnit)
 ├── command.json               # Command registry
 └── COMMANDS.md                # This file

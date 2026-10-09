@@ -19,6 +19,7 @@ namespace RevitMCPCommandSet.Commands.Base
         protected GuardedCommandBase(IWaitableExternalEventHandler handler, UIApplication uiApp)
             : base(handler, uiApp)
         {
+            AutoCheckpoint.EnsureCreated();
         }
 
         private ManualResetEvent Signal =>
@@ -40,6 +41,9 @@ namespace RevitMCPCommandSet.Commands.Base
                             "(a dialog may be open). Check the model before calling again.");
                     _previousCallTimedOut = false;
                 }
+
+                if (AutoCheckpoint.AppliesTo(CommandName, parameters))
+                    AutoCheckpoint.Run();
 
                 return ExecuteCore(parameters, requestId);
             }

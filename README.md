@@ -4,7 +4,7 @@
 
 **Connect AI assistants to Autodesk Revit through the Model Context Protocol.**
 
-Claude Desktop, Claude Code and other MCP clients can read, create, modify and delete elements in the open Revit model: 147 tools covering project info, model health, clash detection, element creation and editing, views and sheets, schedules, site and shared coordinates, MEP, and PDF/DWG/IFC/Excel export.
+Claude Desktop, Claude Code and other MCP clients can read, create, modify and delete elements in the open Revit model: 150 tools covering project info, model health, clash detection, element creation and editing, views and sheets, schedules, site and shared coordinates, MEP, and PDF/DWG/IFC/Excel export.
 
 > [!NOTE]
 > This is a fork of [LuDattilo/revit-mcp-server](https://github.com/LuDattilo/revit-mcp-server). It adds open upstream PRs (Revit 2027 release asset, site/MEP/IFC tools, Node test suite, installer fixes) and makes the model-changing tools safe to hand to an AI agent. See [Safety](#safety).
@@ -38,6 +38,7 @@ The AI works on the live model. These rules hold for every tool:
 - **Dry run first.** Tools that change many elements at once (`import_from_excel`, `bulk_modify_parameter_values`, `clear_parameter_values`, `delete_element`, `wipe_empty_tags`, `purge_unused`, `manage_unplaced_views`) default to `dryRun=true` and return what would change: element, parameter, old value → new value. Nothing is written until the agent calls again with `dryRun=false`. The site/MEP tools accept `dryRun` too, but default to running.
 - **Nothing asks by default.** Deletes, bulk parameter writes, Excel import, workset/phase/type changes, purges and `send_code_to_revit` (C# with full access to the model and your files) all run without a dialog, so any program that can reach the add-in's port, and any MCP client, can change the model or run code in Revit. Every change is still one undoable transaction, except code run with `transactionMode: "none"`, which can save the model or touch files.
 - **Opt in to dialogs.** Set the user environment variable `REVIT_MCP_CONFIRM=1` (`setx REVIT_MCP_CONFIRM 1`) to review every model-changing command and every code run in a Revit dialog first; the default button is No. It is read on every call, so no restart is needed, and it survives reinstalls and updates. `REVIT_MCP_CONFIRM_CODE=1` still works. Revit is brought to the front for the dialog; if Windows refuses, its taskbar button flashes. The command waits up to 120 s for your answer (5 minutes for code); a Yes given after that is treated as No, because the agent has already been told the call failed.
+- **You can go back.** Before the first model-changing call every 30 minutes, the add-in saves the model and keeps a full copy in `mcp-checkpoints\<model name>\` next to it (the last 10). `create_checkpoint` makes one on request, `list_checkpoints` lists them, and `restore_checkpoint` opens one as `<model>_restored_<time>.rvt`. `REVIT_MCP_AUTO_CHECKPOINT=0` turns the automatic ones off. Files on disk only; cloud models have their own version history.
 - **A result is the real result.** Each call waits for its own run and reports its own outcome. If Revit rolls a transaction back (failure handling, or you cancel an error dialog), the tool reports an error instead of success. While a timed-out call is still pending in Revit (for example behind an open dialog), the same tool refuses new calls.
 - **Units are explicit.** Excel import and bulk edits write values in the project's display units, the same form `export_to_excel` produces. `set_element_parameters` takes plain numbers in Revit internal units (feet, radians), as `get_element_parameters` returns them, or a string with a unit such as `"3000 mm"`. `export_room_data` returns m², m³ and m.
 - **Exports cannot overwrite your models.** Export paths must be absolute and end in the format's extension (`.xlsx`, `.csv`/`.txt`/`.tsv`, `.ifc`, …).
@@ -133,7 +134,7 @@ The full tool reference with parameters and examples is in [COMMANDS.md](COMMAND
 | Localized names | Parameter names follow the Revit UI language. Categories can be given as `OST_*` names; some tools still match localized category names |
 | No socket authentication | Any program running under your Windows user can connect to the add-in's port |
 | Timeouts do not cancel | A call that times out keeps running in Revit; the tool reports it and refuses new calls until it finishes |
-| Undo | Each tool call is its own Revit transaction, so undo goes one call at a time |
+| Undo | Each tool call is its own Revit transaction, so Ctrl+Z goes back one call at a time; to go further back use a checkpoint |
 | Clash detection | Exact solid intersection only, stops after 20 s on large sets (`stoppedEarly` in the response); `tolerance` is ignored |
 
 ## Troubleshooting

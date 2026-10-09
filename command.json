@@ -9,6 +9,21 @@
   },
   "commands": [
     {
+      "commandName": "create_checkpoint",
+      "description": "Save the model and keep a full copy of the file as a checkpoint",
+      "assemblyPath": "RevitMCPCommandSet/{VERSION}/RevitMCPCommandSet.dll"
+    },
+    {
+      "commandName": "list_checkpoints",
+      "description": "List the checkpoints of the active model",
+      "assemblyPath": "RevitMCPCommandSet/{VERSION}/RevitMCPCommandSet.dll"
+    },
+    {
+      "commandName": "restore_checkpoint",
+      "description": "Open a checkpoint as a restored copy of the model",
+      "assemblyPath": "RevitMCPCommandSet/{VERSION}/RevitMCPCommandSet.dll"
+    },
+    {
       "commandName": "say_hello",
       "description": "Displays a greeting dialog",
       "assemblyPath": "RevitMCPCommandSet/{VERSION}/RevitMCPCommandSet.dll"

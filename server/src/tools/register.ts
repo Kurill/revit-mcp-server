@@ -22,6 +22,7 @@ import * as ClearParameterValues from "./clear_parameter_values.js";
 import * as ColorElements from "./color_elements.js";
 import * as CopyElements from "./copy_elements.js";
 import * as CreateArray from "./create_array.js";
+import * as CreateCheckpoint from "./create_checkpoint.js";
 import * as CreateCalloutFromRooms from "./create_callout_from_rooms.js";
 import * as CreateColorLegend from "./create_color_legend.js";
 import * as CreateDimensions from "./create_dimensions.js";
@@ -114,6 +115,8 @@ import * as RenameViews from "./rename_views.js";
 import * as RenameWorkset from "./rename_workset.js";
 import * as RenumberElements from "./renumber_elements.js";
 import * as SaveSelection from "./save_selection.js";
+import * as ListCheckpoints from "./list_checkpoints.js";
+import * as RestoreCheckpoint from "./restore_checkpoint.js";
 import * as SayHello from "./say_hello.js";
 import * as SectionBoxFromSelection from "./section_box_from_selection.js";
 import * as SendCodeToRevit from "./send_code_to_revit.js";
@@ -173,6 +176,7 @@ export async function registerTools(server: McpServer) {
     { name: "color_elements", module: ColorElements },
     { name: "copy_elements", module: CopyElements },
     { name: "create_array", module: CreateArray },
+    { name: "create_checkpoint", module: CreateCheckpoint },
     { name: "create_callout_from_rooms", module: CreateCalloutFromRooms },
     { name: "create_color_legend", module: CreateColorLegend },
     { name: "create_dimensions", module: CreateDimensions },
@@ -257,6 +261,7 @@ export async function registerTools(server: McpServer) {
     { name: "modify_schedule", module: ModifySchedule },
     { name: "operate_element", module: OperateElement },
     { name: "override_graphics", module: OverrideGraphics },
+    { name: "list_checkpoints", module: ListCheckpoints },
     { name: "place_viewport", module: PlaceViewport },
     { name: "purge_unused", module: PurgeUnused },
     { name: "query_stored_data", module: QueryStoredData },
@@ -265,6 +270,7 @@ export async function registerTools(server: McpServer) {
     { name: "rename_workset", module: RenameWorkset },
     { name: "renumber_elements", module: RenumberElements },
     { name: "save_selection", module: SaveSelection },
+    { name: "restore_checkpoint", module: RestoreCheckpoint },
     { name: "say_hello", module: SayHello },
     { name: "section_box_from_selection", module: SectionBoxFromSelection },
     { name: "send_code_to_revit", module: SendCodeToRevit },
