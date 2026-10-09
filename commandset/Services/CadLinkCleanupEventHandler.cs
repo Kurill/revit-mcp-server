@@ -161,7 +161,7 @@ namespace RevitMCPCommandSet.Services
                 return;
             }
 
-            if (!ConfirmationHelper.Confirm("delete CAD imports/links:", idsToDelete.Count))
+            if (!ConfirmationHelper.Confirm(this, "delete CAD imports/links:", idsToDelete.Count))
                 throw new OperationCanceledException("Deletion cancelled by the user.");
 
             int deletedCount;

@@ -141,7 +141,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     return;
                 }
 
-                if (!ConfirmationHelper.Confirm($"{Operation} '{ParameterName}' on", changes.Count))
+                if (!ConfirmationHelper.Confirm(this, $"{Operation} '{ParameterName}' on", changes.Count))
                 {
                     Result = new AIResult<object> { Success = false, Message = "Bulk modify cancelled by the user." };
                     return;

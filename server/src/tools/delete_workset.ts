@@ -7,7 +7,7 @@ import { toolResponse, toolError } from "../utils/compactTool.js";
 export function registerDeleteWorksetTool(server: McpServer) {
   server.tool(
     "delete_workset",
-    "Delete a user workset and move its elements to another workset. Requires user confirmation.",
+    "Delete a user workset and move its elements to another workset. Asks the user first only if they enabled confirmation dialogs.",
     {
       worksetName: z.string().describe("Name of the workset to delete"),
       moveToWorksetName: z

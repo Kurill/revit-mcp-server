@@ -32,7 +32,7 @@ namespace RevitMCPCommandSet.Services
                 var doc = app.ActiveUIDocument.Document;
                 var results = new List<SetElementPhaseResult>();
 
-                if (!ConfirmationHelper.Confirm("change phase for", Requests.Count))
+                if (!ConfirmationHelper.Confirm(this, "change phase for", Requests.Count))
                 {
                     Result = new AIResult<List<SetElementPhaseResult>>
                     {

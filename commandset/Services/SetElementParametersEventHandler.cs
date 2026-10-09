@@ -33,7 +33,7 @@ namespace RevitMCPCommandSet.Services
                 var doc = app.ActiveUIDocument.Document;
                 var results = new List<SetParameterResult>();
 
-                if (!ConfirmationHelper.Confirm("modify parameters for", Requests.Count))
+                if (!ConfirmationHelper.Confirm(this, "modify parameters for", Requests.Count))
                 {
                     Result = new AIResult<List<SetParameterResult>>
                     {

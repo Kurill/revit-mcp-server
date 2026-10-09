@@ -76,7 +76,7 @@ namespace RevitMCPCommandSet.Services
             if (!System.IO.File.Exists(FamilyPath))
                 throw new System.IO.FileNotFoundException($"Family file not found: {FamilyPath}");
 
-            if (!ConfirmationHelper.Confirm("load family into", 1))
+            if (!ConfirmationHelper.Confirm(this, "load family into", 1))
             {
                 Result = new AIResult<object>
                 {
@@ -199,7 +199,7 @@ namespace RevitMCPCommandSet.Services
             if (sourceType == null)
                 throw new ArgumentException($"Family type with ID {SourceTypeId} not found");
 
-            if (!ConfirmationHelper.Confirm("duplicate type in", 1))
+            if (!ConfirmationHelper.Confirm(this, "duplicate type in", 1))
             {
                 Result = new AIResult<object>
                 {

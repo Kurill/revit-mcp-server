@@ -52,7 +52,14 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                 var doc = app.ActiveUIDocument.Document;
                 ResultInfo = new ExecutionResultInfo();
 
-                if (ConfirmationRequired() && !ConfirmRun(_generatedCode, _transactionMode))
+                if (RevitMCPCommandSet.Utils.AbandonedCalls.IsAbandoned(this))
+                {
+                    ResultInfo.Success = false;
+                    ResultInfo.ErrorMessage = "Execution cancelled: the call had already timed out.";
+                    return;
+                }
+
+                if (Helpers.ConfirmationHelper.DialogsEnabled() && !ConfirmRun(_generatedCode, _transactionMode))
                 {
                     ResultInfo.Success = false;
                     ResultInfo.ErrorMessage = "Execution cancelled by the user.";
@@ -103,22 +110,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
             }
         }
 
-        // A user environment variable survives reinstalls and auto-updates, which rewrite
-        // commandRegistry.json. It is read from the registry on every run, so changing it
-        // needs no Revit restart.
-        private static bool ConfirmationRequired()
-        {
-            try
-            {
-                return Environment.GetEnvironmentVariable("REVIT_MCP_CONFIRM_CODE", EnvironmentVariableTarget.User) == "1";
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static bool ConfirmRun(string code, string transactionMode)
+        private bool ConfirmRun(string code, string transactionMode)
         {
             var dialog = new TaskDialog("MCP: run AI-generated code?")
             {
@@ -132,7 +124,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                 CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
                 DefaultButton = TaskDialogResult.No
             };
-            return dialog.Show() == TaskDialogResult.Yes;
+            return Helpers.ConfirmationHelper.Ask(this, dialog);
         }
 
         private object CompileAndExecuteCode(string code, Document doc, object[] parameters)

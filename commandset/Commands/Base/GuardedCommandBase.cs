@@ -54,8 +54,13 @@ namespace RevitMCPCommandSet.Commands.Base
         protected new bool RaiseAndWaitForCompletion(int timeoutMilliseconds)
         {
             Signal.Reset();
+            AbandonedCalls.Clear(Handler);
             bool completed = base.RaiseAndWaitForCompletion(timeoutMilliseconds);
             _previousCallTimedOut = !completed;
+            // The handler may still run (e.g. after a confirmation dialog is answered);
+            // ConfirmationHelper then cancels it instead of applying a change nobody is waiting for.
+            if (!completed)
+                AbandonedCalls.Mark(Handler);
             return completed;
         }
     }

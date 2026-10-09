@@ -134,7 +134,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                         return;
                     }
 
-                    if (!ConfirmationHelper.Confirm($"import {changes.Count} parameter value(s) from Excel into", elementCount))
+                    if (!ConfirmationHelper.Confirm(this, $"import {changes.Count} parameter value(s) from Excel into", elementCount))
                     {
                         Result = new { success = false, error = "Import cancelled by the user." };
                         return;

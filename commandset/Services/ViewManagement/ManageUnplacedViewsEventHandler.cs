@@ -213,7 +213,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                 return;
             }
 
-            if (!ConfirmationHelper.Confirm("delete unplaced views:", views.Count))
+            if (!ConfirmationHelper.Confirm(this, "delete unplaced views:", views.Count))
             {
                 Result = new AIResult<object> { Success = false, Message = "Deletion cancelled by the user." };
                 return;

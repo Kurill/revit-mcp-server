@@ -46,7 +46,7 @@ namespace RevitMCPCommandSet.Services
 
             try
             {
-                bool result = ExecuteElementOperation(uiDoc, OperationData);
+                bool result = ExecuteElementOperation(uiDoc, OperationData, this);
 
                 Result = new AIResult<string>
                 {
@@ -92,7 +92,7 @@ namespace RevitMCPCommandSet.Services
         /// <param name="uidoc">Current UI document</param>
         /// <param name="setting">Operation settings</param>
         /// <returns>Whether the operation was successful</returns>
-        public static bool ExecuteElementOperation(UIDocument uidoc, OperationSetting setting)
+        public static bool ExecuteElementOperation(UIDocument uidoc, OperationSetting setting, object handler = null)
         {
             // Check parameter validity
             if (uidoc == null || uidoc.Document == null || setting == null || setting.ElementIds == null ||
@@ -248,7 +248,7 @@ namespace RevitMCPCommandSet.Services
 
                 case ElementOperationType.Delete:
                     // Delete elements (requires transaction)
-                    if (!ConfirmationHelper.Confirm("delete", elementIds.Count))
+                    if (!ConfirmationHelper.Confirm(handler, "delete", elementIds.Count))
                         throw new OperationCanceledException("Deletion cancelled by the user.");
                     using (Transaction trans = new Transaction(doc, "Delete Elements"))
                     {

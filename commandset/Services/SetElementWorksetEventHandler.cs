@@ -42,7 +42,7 @@ namespace RevitMCPCommandSet.Services
                     return;
                 }
 
-                if (!ConfirmationHelper.Confirm("change workset for", Requests.Count))
+                if (!ConfirmationHelper.Confirm(this, "change workset for", Requests.Count))
                 {
                     Result = new AIResult<List<SetWorksetResult>>
                     {

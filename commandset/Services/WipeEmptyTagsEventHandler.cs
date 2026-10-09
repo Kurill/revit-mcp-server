@@ -167,7 +167,7 @@ namespace RevitMCPCommandSet.Services
 
                 if (!DryRun && emptyTagIds.Count > 0)
                 {
-                    if (!ConfirmationHelper.Confirm("delete", emptyTagIds.Count))
+                    if (!ConfirmationHelper.Confirm(this, "delete", emptyTagIds.Count))
                     {
                         Result = new
                         {

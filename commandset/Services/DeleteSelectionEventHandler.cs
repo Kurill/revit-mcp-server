@@ -45,7 +45,7 @@ namespace RevitMCPCommandSet.Services
                     return;
                 }
 
-                if (!ConfirmationHelper.Confirm("delete", 1))
+                if (!ConfirmationHelper.Confirm(this, "delete", 1))
                 {
                     Result = new AIResult<object>
                     {

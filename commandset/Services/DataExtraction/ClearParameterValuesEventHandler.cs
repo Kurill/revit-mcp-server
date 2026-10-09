@@ -91,7 +91,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 if (!DryRun)
                 {
                     int candidates = elements.Count(e => IsCandidate(e));
-                    if (!ConfirmationHelper.Confirm($"clear '{ParameterName}' on", candidates))
+                    if (!ConfirmationHelper.Confirm(this, $"clear '{ParameterName}' on", candidates))
                         throw new OperationCanceledException("Clearing cancelled by the user.");
                 }
 
