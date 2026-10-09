@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Models.Views;
@@ -8,7 +9,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class ModifyScheduleCommand : ExternalEventCommandBase
+    public class ModifyScheduleCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private ModifyScheduleEventHandler _handler => (ModifyScheduleEventHandler)Handler;
@@ -18,7 +19,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public ModifyScheduleCommand(UIApplication uiApp)
             : base(new ModifyScheduleEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

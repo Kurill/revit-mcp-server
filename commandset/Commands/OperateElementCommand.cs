@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPSDK.API.Base;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class OperateElementCommand : ExternalEventCommandBase
+    public class OperateElementCommand : GuardedCommandBase
     {
         private OperateElementEventHandler _handler => (OperateElementEventHandler)Handler;
 
@@ -29,7 +30,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {
@@ -43,7 +44,7 @@ namespace RevitMCPCommandSet.Commands
                 _handler.SetParameters(data);
 
                 // Raise external event and wait for completion
-                if (RaiseAndWaitForCompletion(10000))
+                if (RaiseAndWaitForCompletion(120000))
                 {
                     return _handler.Result;
                 }

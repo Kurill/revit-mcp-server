@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Workflow
 {
-    public class WorkflowSheetSetCommand : ExternalEventCommandBase
+    public class WorkflowSheetSetCommand : GuardedCommandBase
     {
         private WorkflowSheetSetEventHandler _handler => (WorkflowSheetSetEventHandler)Handler;
         public override string CommandName => "workflow_sheet_set";
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.Workflow
         public WorkflowSheetSetCommand(UIApplication uiApp)
             : base(new WorkflowSheetSetEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

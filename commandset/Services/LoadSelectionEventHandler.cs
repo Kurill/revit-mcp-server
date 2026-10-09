@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class LoadSelectionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class LoadSelectionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public string SelectionName { get; set; } = "";
         public bool SelectInView { get; set; } = true;
@@ -17,6 +17,7 @@ namespace RevitMCPCommandSet.Services
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 10000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

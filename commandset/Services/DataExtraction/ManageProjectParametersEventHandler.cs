@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ManageProjectParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ManageProjectParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public string Action { get; set; } = "list";
         public string ParameterName { get; set; } = "";
@@ -23,6 +23,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(string action, string parameterName, string dataType, string groupUnder,
             bool isInstance, List<string> categories, bool isShared)
@@ -287,7 +288,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
                         if (inserted)
                         {
-                            transaction.Commit();
+                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                             Result = new AIResult<object>
                             {
                                 Success = true,
@@ -311,7 +312,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                         }
                         else
                         {
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                             Result = new AIResult<object>
                             {
                                 Success = false,
@@ -329,7 +330,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 catch (Exception ex)
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw new Exception($"Create failed: {ex.Message}", ex);
                 }
             }
@@ -379,7 +380,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     bool removed = doc.ParameterBindings.Remove(targetDefinition);
                     if (removed)
                     {
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                         Result = new AIResult<object>
                         {
                             Success = true,
@@ -397,7 +398,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     }
                     else
                     {
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         Result = new AIResult<object>
                         {
                             Success = false,
@@ -408,7 +409,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 catch (Exception ex)
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw new Exception($"Delete failed: {ex.Message}", ex);
                 }
             }
@@ -489,7 +490,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
                     if (reinserted)
                     {
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         var addedCategories = Categories
                             .Except(existingCategoryNames, StringComparer.OrdinalIgnoreCase)
@@ -519,7 +520,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     }
                     else
                     {
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         Result = new AIResult<object>
                         {
                             Success = false,
@@ -530,7 +531,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 catch (Exception ex)
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw new Exception($"Modify failed: {ex.Message}", ex);
                 }
             }

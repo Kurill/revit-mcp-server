@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Models.Architecture;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class CreateGridCommand : ExternalEventCommandBase
+    public class CreateGridCommand : GuardedCommandBase
     {
         private CreateGridEventHandler _handler => (CreateGridEventHandler)Handler;
 
@@ -24,7 +25,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

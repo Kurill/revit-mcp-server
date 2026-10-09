@@ -8,7 +8,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateStructuralFramingSystemEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateStructuralFramingSystemEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -18,6 +18,7 @@ namespace RevitMCPCommandSet.Services
         /// Event synchronization object
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Beam system creation parameters
@@ -174,7 +175,7 @@ namespace RevitMCPCommandSet.Services
                         }
                     }
 
-                    trans.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
 
                     // 9. Get member beam IDs
                     ICollection<ElementId> beamIds = beamSystem.GetBeamIds();
@@ -509,7 +510,6 @@ namespace RevitMCPCommandSet.Services
         /// </summary>
         public bool WaitForCompletion(int timeoutMilliseconds = 15000)
         {
-            _resetEvent.Reset();
         return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 

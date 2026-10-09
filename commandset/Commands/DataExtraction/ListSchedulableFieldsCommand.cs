@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -6,7 +7,7 @@ using System;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class ListSchedulableFieldsCommand : ExternalEventCommandBase
+    public class ListSchedulableFieldsCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private ListSchedulableFieldsEventHandler _handler => (ListSchedulableFieldsEventHandler)Handler;
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public ListSchedulableFieldsCommand(UIApplication uiApp)
             : base(new ListSchedulableFieldsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

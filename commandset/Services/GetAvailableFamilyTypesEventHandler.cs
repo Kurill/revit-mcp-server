@@ -4,7 +4,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class GetAvailableFamilyTypesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetAvailableFamilyTypesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         // Execution result
         public List<FamilyTypeInfo> ResultFamilyTypes { get; private set; }
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services
         // State synchronization object
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Filter criteria
         public List<string> CategoryList { get; set; }

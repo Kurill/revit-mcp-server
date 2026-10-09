@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class ExportToExcelCommand : ExternalEventCommandBase
+    public class ExportToExcelCommand : GuardedCommandBase
     {
         private ExportToExcelEventHandler _handler => (ExportToExcelEventHandler)Handler;
         public override string CommandName => "export_to_excel";
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public ExportToExcelCommand(UIApplication uiApp)
             : base(new ExportToExcelEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

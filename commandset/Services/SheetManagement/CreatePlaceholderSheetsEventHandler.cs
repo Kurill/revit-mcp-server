@@ -6,7 +6,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.SheetManagement
 {
-    public class CreatePlaceholderSheetsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreatePlaceholderSheetsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private string _action;
         private List<PlaceholderSheetDefinition> _sheets;
@@ -16,6 +16,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(string action, List<PlaceholderSheetDefinition> sheets, List<long> sheetIds, long? titleBlockId)
         {
@@ -110,12 +111,12 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                         }
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }
@@ -231,12 +232,12 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                         }
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }
@@ -282,12 +283,12 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                         }
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }

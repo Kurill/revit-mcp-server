@@ -11,9 +11,10 @@ namespace RevitMCPCommandSet.Services.SiteMep
     /// <see cref="SiteMepCore"/>) before raising the event. The work runs on Revit's
     /// API thread; any exception becomes a Success=false AIResult.
     /// </summary>
-    public class SiteMepEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SiteMepEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
         private readonly string _name;
 
         public SiteMepEventHandler(string name)

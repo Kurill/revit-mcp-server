@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class DeleteWorksetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class DeleteWorksetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string WorksetName { get; set; }
         public string MoveToWorksetName { get; set; }
@@ -16,7 +17,6 @@ namespace RevitMCPCommandSet.Services
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -112,7 +112,7 @@ namespace RevitMCPCommandSet.Services
                     try
                     {
                         WorksetTable.DeleteWorkset(doc, targetWorkset.Id, deleteSettings);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -129,7 +129,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

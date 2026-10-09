@@ -40,7 +40,7 @@ namespace RevitMCPCommandSet.Services.Architecture
     /// <summary>
     /// Event handler for creating rooms in Revit
     /// </summary>
-    public class CreateRoomEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateRoomEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication _uiApp;
         private UIDocument _uiDoc => _uiApp.ActiveUIDocument;
@@ -50,6 +50,7 @@ namespace RevitMCPCommandSet.Services.Architecture
         /// Event wait object for synchronization
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Room creation data (input)
@@ -159,7 +160,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                         {
                             // If location-based creation failed, create an unplaced room
                             // This can happen if the point is not inside an enclosed area
-                            tx.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                             continue;
                         }
 
@@ -247,7 +248,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                             }
                         }
 
-                        tx.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
 
                         // Add to result list
                         createdRooms.Add(new RoomResultInfo
@@ -265,7 +266,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                         catch
                         {
                             if (tx.GetStatus() == TransactionStatus.Started)
-                                tx.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                             throw;
                         }
                     }

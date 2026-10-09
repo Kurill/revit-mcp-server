@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class BatchModifyViewRangeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class BatchModifyViewRangeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<long> ViewIds { get; set; } = new List<long>();
         public double? TopOffsetMm { get; set; }
@@ -20,6 +20,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 15000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -99,12 +100,12 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         }
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

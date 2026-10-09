@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class MatchElementPropertiesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class MatchElementPropertiesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public long SourceElementId { get; set; } = 0;
         public List<long> TargetElementIds { get; set; } = new List<long>();
@@ -97,12 +98,12 @@ namespace RevitMCPCommandSet.Services
                             });
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

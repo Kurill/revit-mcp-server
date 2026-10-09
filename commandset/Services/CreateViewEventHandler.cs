@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateViewEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateViewEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public ViewCreationInfo ViewInfo { get; set; }
         public AIResult<object> Result { get; private set; }
@@ -60,7 +61,7 @@ namespace RevitMCPCommandSet.Services
                                 throw new ArgumentException($"Unsupported view type: {ViewInfo.ViewType}");
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -72,7 +73,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

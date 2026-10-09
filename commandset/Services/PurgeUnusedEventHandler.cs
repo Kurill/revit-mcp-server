@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class PurgeUnusedEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class PurgeUnusedEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool DryRun { get; set; } = true;
         public int MaxElements { get; set; } = 500;
@@ -112,12 +113,12 @@ namespace RevitMCPCommandSet.Services
                                 }
                                 catch { /* skip elements that can't be deleted */ }
                             }
-                            transaction.Commit();
+                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                         }
                         catch
                         {
                             if (transaction.GetStatus() == TransactionStatus.Started)
-                                transaction.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                             throw;
                         }
                     }

@@ -10,9 +10,10 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class RenameFamiliesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class RenameFamiliesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Operation { get; set; } = "prefix";
         public string Prefix { get; set; } = "";
@@ -207,12 +208,12 @@ namespace RevitMCPCommandSet.Services
                             }
                         }
 
-                        if (!DryRun) transaction.Commit();
+                        if (!DryRun) RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (!DryRun && transaction?.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

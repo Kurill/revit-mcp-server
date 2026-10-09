@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class ModifyElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ModifyElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public ModifyElementSetting Settings { get; set; }
         public AIResult<object> Result { get; private set; }
@@ -68,12 +69,12 @@ namespace RevitMCPCommandSet.Services
                                 throw new ArgumentException($"Unknown action: {Settings.Action}");
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

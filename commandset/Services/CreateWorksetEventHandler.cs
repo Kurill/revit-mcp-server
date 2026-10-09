@@ -5,16 +5,16 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateWorksetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateWorksetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string WorksetName { get; set; }
         public AIResult<object> Result { get; private set; }
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -65,7 +65,7 @@ namespace RevitMCPCommandSet.Services
                     try
                     {
                         var workset = Workset.Create(doc, WorksetName);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -85,7 +85,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

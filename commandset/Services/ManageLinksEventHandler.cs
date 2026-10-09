@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class ManageLinksEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ManageLinksEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Action { get; set; } = "list";
         public long LinkId { get; set; } = 0;

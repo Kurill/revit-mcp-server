@@ -11,7 +11,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
     /// <summary>
     /// External event handler for code execution
     /// </summary>
-    public class ExecuteCodeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExecuteCodeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public const string TransactionModeAuto = "auto";
         public const string TransactionModeNone = "none";
@@ -27,6 +27,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
         // State synchronization
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Set code and parameters for execution
         public void SetExecutionParameters(string code, object[] parameters = null, string transactionMode = TransactionModeAuto)
@@ -41,7 +42,6 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
         // Wait for completion - IWaitableExternalEventHandler implementation
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -51,6 +51,13 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
             {
                 var doc = app.ActiveUIDocument.Document;
                 ResultInfo = new ExecutionResultInfo();
+
+                if (!ConfirmRun(_generatedCode, _transactionMode))
+                {
+                    ResultInfo.Success = false;
+                    ResultInfo.ErrorMessage = "Execution cancelled by the user.";
+                    return;
+                }
 
                 if (_transactionMode == TransactionModeNone)
                 {
@@ -77,7 +84,7 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                             parameters: _executionParameters
                         );
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         ResultInfo.Success = true;
                         ResultInfo.Result = JsonConvert.SerializeObject(result);
@@ -94,6 +101,23 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                 TaskCompleted = true;
                 _resetEvent.Set();
             }
+        }
+
+        private static bool ConfirmRun(string code, string transactionMode)
+        {
+            var dialog = new TaskDialog("MCP: run AI-generated code?")
+            {
+                MainInstruction = "An AI agent wants to run C# code inside Revit.",
+                MainContent = "The code has full access to this model and to your files. " +
+                              (transactionMode == TransactionModeNone
+                                  ? "It manages its own transactions and may save or sync the model."
+                                  : "Its model changes are committed as one undoable transaction.") +
+                              "\n\nExpand the details to read it before allowing.",
+                ExpandedContent = code,
+                CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
+                DefaultButton = TaskDialogResult.No
+            };
+            return dialog.Show() == TaskDialogResult.Yes;
         }
 
         private object CompileAndExecuteCode(string code, Document doc, object[] parameters)

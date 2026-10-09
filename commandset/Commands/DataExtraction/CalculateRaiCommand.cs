@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class CalculateRaiCommand : ExternalEventCommandBase
+    public class CalculateRaiCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CalculateRaiEventHandler _handler => (CalculateRaiEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public CalculateRaiCommand(UIApplication uiApp)
             : base(new CalculateRaiEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

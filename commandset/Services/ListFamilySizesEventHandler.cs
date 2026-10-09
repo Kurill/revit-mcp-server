@@ -3,7 +3,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class ListFamilySizesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ListFamilySizesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public int Limit { get; set; } = 50;
         public string SortBy { get; set; } = "instanceCount";
@@ -13,6 +13,7 @@ namespace RevitMCPCommandSet.Services
         public string ErrorMessage { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {

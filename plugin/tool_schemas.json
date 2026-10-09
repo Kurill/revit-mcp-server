@@ -827,7 +827,7 @@
         },
         "tolerance": {
           "type": "number",
-          "description": "Tolerance in mm (default: 0, exact intersection)"
+          "description": "Ignored: the check uses Revit's exact solid intersection."
         },
         "maxResults": {
           "type": "number",
@@ -863,7 +863,7 @@
             "selection"
           ],
           "default": "whole_model",
-          "description": "Scope of elements to target."
+          "description": "Scope of elements to target. whole_model requires at least one entry in categories."
         },
         "filterValue": {
           "type": "string",
@@ -3669,7 +3669,7 @@
   },
   {
     "name": "export_room_data",
-    "description": "Export room data from the current Revit project. Returns detailed information about each room including name, number, level, area, volume, perimeter, department, and more. Useful for generating room schedules, space analysis, and facility management data.\n\nOPTIMIZATION:\n- Use 'maxResults' to limit rooms returned (default 100). Response includes truncated flag and totalCount.\n\nGUIDANCE:\n- Get all rooms: returns name, number, area, volume, level, department, boundaries\n- Use room data for space analysis, area calculations, or BIM validation\n- Room boundaries can be used with create_floor to auto-generate floors\n\nTIPS:\n- Only returns placed rooms with valid area > 0\n- Area and volume are in the project's display units\n- Combine with create_views_from_rooms to auto-create room views\n- Use get_elements_in_spatial_volume to find what's inside each room",
+    "description": "Export room data from the current Revit project. Returns detailed information about each room including name, number, level, area, volume, perimeter, department, and more. Useful for generating room schedules, space analysis, and facility management data.\n\nOPTIMIZATION:\n- Use 'maxResults' to limit rooms returned (default 100). Response includes truncated flag and totalCount.\n\nGUIDANCE:\n- Get all rooms: returns name, number, area, volume, level, department, boundaries\n- Use room data for space analysis, area calculations, or BIM validation\n- Room boundaries can be used with create_floor to auto-generate floors\n\nTIPS:\n- Unplaced and not-enclosed rooms are skipped unless includeUnplacedRooms / includeNotEnclosedRooms are set\n- Area is in m2, volume in m3, perimeter and unbounded height in m (see the units field)\n- Combine with create_views_from_rooms to auto-create room views\n- Use get_elements_in_spatial_volume to find what's inside each room",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -5812,7 +5812,7 @@
   },
   {
     "name": "send_code_to_revit",
-    "description": "Execute custom C# code in Revit. Your code runs inside a static method with signature: `public static object Execute(Document document, object[] parameters)`. Available variables: `document` (Autodesk.Revit.DB.Document — the active document), `parameters` (object[] — optional args). Auto-imported namespaces: System, System.Linq, Autodesk.Revit.DB, Autodesk.Revit.UI, System.Collections.Generic. Use `return` to send results back. In 'auto' mode your code runs inside a Transaction; use 'none' to manage transactions yourself.",
+    "description": "Execute custom C# code in Revit. Your code runs inside a static method with signature: `public static object Execute(Document document, object[] parameters)`. Available variables: `document` (Autodesk.Revit.DB.Document — the active document), `parameters` (object[] — optional args). Auto-imported namespaces: System, System.Linq, Autodesk.Revit.DB, Autodesk.Revit.UI, System.Collections.Generic. Use `return` to send results back. In 'auto' mode your code runs inside a Transaction; use 'none' to manage transactions yourself. The add-in ships with this command disabled, and when enabled the user must approve each run in a Revit dialog that shows the code, so prefer the dedicated tools.",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -5966,7 +5966,7 @@
                   "number",
                   "boolean"
                 ],
-                "description": "Value to set."
+                "description": "Value to set. A plain number on a length/area/angle parameter is in Revit internal units (feet, square feet, radians), the same units get_element_parameters returns. A string with a unit, e.g. \"3000 mm\", is parsed in the project's units."
               }
             },
             "required": [
@@ -6610,7 +6610,7 @@
                     "boolean"
                   ]
                 },
-                "description": "Parameter name → value pairs to set"
+                "description": "Parameter name → value pairs to set. Plain numbers on length/area/angle parameters are Revit internal units (feet, square feet, radians); a value with a unit, e.g. \"3000 mm\", is parsed in the project's units."
               }
             },
             "required": [

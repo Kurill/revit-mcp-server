@@ -29,7 +29,7 @@ export function registerClashDetectionTool(server: McpServer) {
       tolerance: z
         .number()
         .optional()
-        .describe("Tolerance in mm (default: 0, exact intersection)"),
+        .describe("Ignored: the check uses Revit's exact solid intersection."),
       maxResults: z
         .number()
         .optional()

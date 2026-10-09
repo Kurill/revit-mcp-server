@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class CreateViewsFromRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateViewsFromRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<long> RoomIds { get; set; } = new List<long>();
         public bool AllRooms { get; set; } = false;
@@ -24,6 +24,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 60000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -124,7 +125,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
 
                                     try { createdView.Name = viewName; } catch { }
 
-                                    t.Commit();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
 
                                     successCount++;
                                     createdViews.Add(new
@@ -144,13 +145,13 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                                 }
                                 else if (viewTypeName != "elevation") // elevation handled inside
                                 {
-                                    t.RollBack();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                 }
                                 }
                                 catch
                                 {
                                     if (t.GetStatus() == TransactionStatus.Started)
-                                        t.RollBack();
+                                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                     throw;
                                 }
                             }

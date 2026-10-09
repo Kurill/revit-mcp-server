@@ -5,7 +5,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class ColorSplashEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ColorSplashEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait object
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Results data
@@ -195,7 +196,7 @@ namespace RevitMCPCommandSet.Services
                         });
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                     ColoringResults = new
                     {
@@ -208,7 +209,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

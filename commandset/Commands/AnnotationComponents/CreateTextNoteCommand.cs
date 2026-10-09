@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.AnnotationComponents;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.AnnotationComponents
 {
-    public class CreateTextNoteCommand : ExternalEventCommandBase
+    public class CreateTextNoteCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CreateTextNoteEventHandler _handler => (CreateTextNoteEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.AnnotationComponents
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

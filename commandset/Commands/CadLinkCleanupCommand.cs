@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class CadLinkCleanupCommand : ExternalEventCommandBase
+    public class CadLinkCleanupCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CadLinkCleanupEventHandler _handler => (CadLinkCleanupEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -28,7 +29,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.DeleteLinks = parameters?["deleteLinks"]?.Value<bool>() ?? false;
                     _handler.ElementIds = parameters?["elementIds"]?.ToObject<List<long>>() ?? new List<long>();
 
-                    if (RaiseAndWaitForCompletion(15000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

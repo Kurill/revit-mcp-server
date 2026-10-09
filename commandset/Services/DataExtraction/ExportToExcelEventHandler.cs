@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,9 +10,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ExportToExcelEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExportToExcelEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Input parameters
         public List<string> Categories { get; set; } = new();
@@ -58,6 +60,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                     FilePath = Path.Combine(desktop, $"RevitExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
                 }
+                ExportPathGuard.Check(FilePath, ".xlsx");
 
                 // Collect elements by category
                 var collector = new FilteredElementCollector(doc)

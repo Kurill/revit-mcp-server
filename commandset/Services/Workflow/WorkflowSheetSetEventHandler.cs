@@ -8,9 +8,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.Workflow
 {
-    public class WorkflowSheetSetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class WorkflowSheetSetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<SheetDefinition> Sheets { get; set; } = new();
         public string TitleBlockName { get; set; } = "";
@@ -90,7 +91,7 @@ namespace RevitMCPCommandSet.Services.Workflow
                         }
                     }
 
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 }
 
                 Result = new

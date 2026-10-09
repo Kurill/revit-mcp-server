@@ -9,9 +9,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.Workflow
 {
-    public class WorkflowModelAuditEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class WorkflowModelAuditEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool IncludeWarnings { get; set; } = true;
         public bool IncludeFamilies { get; set; } = true;

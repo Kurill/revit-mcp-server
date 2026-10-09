@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Workflow
 {
-    public class WorkflowClashReviewCommand : ExternalEventCommandBase
+    public class WorkflowClashReviewCommand : GuardedCommandBase
     {
         private WorkflowClashReviewEventHandler _handler => (WorkflowClashReviewEventHandler)Handler;
         public override string CommandName => "workflow_clash_review";
@@ -14,7 +15,7 @@ namespace RevitMCPCommandSet.Commands.Workflow
         public WorkflowClashReviewCommand(UIApplication uiApp)
             : base(new WorkflowClashReviewEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

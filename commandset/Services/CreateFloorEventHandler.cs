@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateFloorEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateFloorEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<Dictionary<string, double>> BoundaryPoints { get; set; } = new List<Dictionary<string, double>>();
         public long RoomId { get; set; } = 0;
@@ -61,12 +62,12 @@ namespace RevitMCPCommandSet.Services
                     {
                         var curveLoops = new List<CurveLoop> { boundary };
                         floor = Floor.Create(doc, curveLoops, floorType.Id, level.Id);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

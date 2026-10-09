@@ -3,7 +3,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class FindUndimensionedElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class FindUndimensionedElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private static readonly List<BuiltInCategory> DefaultCategories = new List<BuiltInCategory>
         {
@@ -23,6 +23,7 @@ namespace RevitMCPCommandSet.Services
         public string ErrorMessage { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {

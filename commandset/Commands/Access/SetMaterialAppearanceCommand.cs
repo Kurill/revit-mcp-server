@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class SetMaterialAppearanceCommand : ExternalEventCommandBase
+    public class SetMaterialAppearanceCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private SetMaterialAppearanceEventHandler _handler => (SetMaterialAppearanceEventHandler)Handler;
@@ -14,7 +15,7 @@ namespace RevitMCPCommandSet.Commands.Access
         public SetMaterialAppearanceCommand(UIApplication uiApp)
             : base(new SetMaterialAppearanceEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

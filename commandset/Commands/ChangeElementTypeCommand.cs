@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class ChangeElementTypeCommand : ExternalEventCommandBase
+    public class ChangeElementTypeCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private ChangeElementTypeEventHandler _handler => (ChangeElementTypeEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -29,7 +30,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.TargetFamilyName = parameters?["targetFamilyName"]?.Value<string>() ?? "";
 
                     // Scale timeout with number of elements (3s base + 2s per element)
-                    int timeoutMs = Math.Max(15000, 3000 + _handler.ElementIds.Count * 2000);
+                    int timeoutMs = Math.Max(120000, 3000 + _handler.ElementIds.Count * 2000);
                     if (RaiseAndWaitForCompletion(timeoutMs))
                     {
                         return _handler.Result;

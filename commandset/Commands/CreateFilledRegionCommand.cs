@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class CreateFilledRegionCommand : ExternalEventCommandBase
+    public class CreateFilledRegionCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CreateFilledRegionEventHandler _handler => (CreateFilledRegionEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

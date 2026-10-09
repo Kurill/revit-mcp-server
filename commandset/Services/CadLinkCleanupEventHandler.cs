@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Helpers;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using RevitMCPCommandSet.Models.Common;
@@ -5,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CadLinkCleanupEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CadLinkCleanupEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Action { get; set; } = "list";
         public bool DeleteImports { get; set; } = false;
@@ -131,6 +133,11 @@ namespace RevitMCPCommandSet.Services
             if (ElementIds.Count > 0)
             {
                 idsToDelete = ElementIds.Select(id => ToElementId(id)).ToList();
+                var notCad = idsToDelete.Where(id => !(doc.GetElement(id) is ImportInstance || doc.GetElement(id) is CADLinkType)).ToList();
+                if (notCad.Count > 0)
+                    throw new ArgumentException(
+                        $"Refusing to delete: {notCad.Count} of the given ids are not CAD imports, links or link types " +
+                        $"(first: {notCad[0]}).");
             }
             else
             {
@@ -154,6 +161,9 @@ namespace RevitMCPCommandSet.Services
                 return;
             }
 
+            if (!ConfirmationHelper.Confirm("delete CAD imports/links:", idsToDelete.Count))
+                throw new OperationCanceledException("Deletion cancelled by the user.");
+
             int deletedCount;
             using (var transaction = new Transaction(doc, "Delete CAD Elements"))
             {
@@ -162,12 +172,12 @@ namespace RevitMCPCommandSet.Services
                 {
                     var deleted = doc.Delete(idsToDelete);
                     deletedCount = deleted.Count;
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }

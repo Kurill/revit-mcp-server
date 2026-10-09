@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Utils;
 using System.IO;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -6,9 +7,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class ExportScheduleEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExportScheduleEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public long ScheduleId { get; set; }
         public string ExportPath { get; set; }
@@ -57,6 +59,7 @@ namespace RevitMCPCommandSet.Services
                 if (string.IsNullOrEmpty(exportPath))
                     exportPath = Path.Combine(Path.GetTempPath(), $"schedule_{ScheduleId}.txt");
 
+                ExportPathGuard.Check(exportPath, ".txt", ".csv", ".tsv");
                 string directory = Path.GetDirectoryName(exportPath);
                 string filename = Path.GetFileName(exportPath);
 

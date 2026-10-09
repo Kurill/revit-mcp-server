@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using RevitMCPCommandSet.Helpers;
 using RevitMCPCommandSet.Models.Common;
 using RevitMCPCommandSet.Utils;
 using RevitMCPSDK.API.Interfaces;
@@ -10,7 +11,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class BulkModifyParameterValuesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class BulkModifyParameterValuesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<long> ElementIds { get; set; } = new List<long>();
         public string CategoryName { get; set; } = "";
@@ -20,11 +21,12 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public string FindText { get; set; } = "";
         public string ReplaceText { get; set; } = "";
         public bool OnlyEmpty { get; set; } = false; // only modify empty values
-        public bool DryRun { get; set; } = false;
+        public bool DryRun { get; set; } = true;
 
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -67,117 +69,111 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 if (string.IsNullOrEmpty(ParameterName))
                     throw new ArgumentException("parameterName is required");
 
-                int modified = 0;
                 int skipped = 0;
-                int errors = 0;
-                var preview = new List<object>();
+                var changes = new List<(Element Element, Parameter Param, string OldValue, string NewValue)>();
 
-                using (var transaction = DryRun ? null : new Transaction(doc, "Bulk Modify Parameter Values"))
+                foreach (var elem in elements)
                 {
-                    if (!DryRun) transaction.Start();
-                    try
+                    var param = elem.LookupParameter(ParameterName);
+                    if (param == null || param.IsReadOnly)
                     {
-
-                    foreach (var elem in elements)
-                    {
-                        var param = elem.LookupParameter(ParameterName);
-                        if (param == null || param.IsReadOnly)
-                        {
-                            skipped++;
-                            continue;
-                        }
-
-                        string currentValue = param.AsValueString() ?? param.AsString() ?? "";
-                        string newValue = "";
-
-                        try
-                        {
-                            switch (Operation.ToLower())
-                            {
-                                case "set":
-                                    if (OnlyEmpty && !string.IsNullOrEmpty(currentValue)) { skipped++; continue; }
-                                    newValue = Value;
-                                    break;
-                                case "prefix":
-                                    if (OnlyEmpty && !string.IsNullOrEmpty(currentValue)) { skipped++; continue; }
-                                    newValue = Value + currentValue;
-                                    break;
-                                case "suffix":
-                                    if (OnlyEmpty && !string.IsNullOrEmpty(currentValue)) { skipped++; continue; }
-                                    newValue = currentValue + Value;
-                                    break;
-                                case "find_replace":
-                                    if (!currentValue.Contains(FindText)) { skipped++; continue; }
-                                    newValue = currentValue.Replace(FindText, ReplaceText);
-                                    break;
-                                case "clear":
-                                    newValue = "";
-                                    break;
-                                default:
-                                    throw new ArgumentException($"Unknown operation: {Operation}");
-                            }
-
-                            if (DryRun)
-                            {
-                                preview.Add(new
-                                {
-#if REVIT2024_OR_GREATER
-                                    elementId = elem.Id.Value,
-#else
-                                    elementId = elem.Id.IntegerValue,
-#endif
-                                    elementName = elem.Name,
-                                    currentValue,
-                                    newValue
-                                });
-                                modified++;
-                            }
-                            else
-                            {
-                                if (param.StorageType == StorageType.String)
-                                    param.Set(newValue);
-                                else if (param.StorageType == StorageType.Integer && int.TryParse(newValue, out int intVal))
-                                    param.Set(intVal);
-                                else if (param.StorageType == StorageType.Double && double.TryParse(newValue, out double dblVal))
-                                    param.Set(dblVal);
-                                else
-                                    param.Set(newValue); // try as string anyway
-
-                                modified++;
-                            }
-                        }
-                        catch
-                        {
-                            errors++;
-                        }
+                        skipped++;
+                        continue;
                     }
 
-                    if (!DryRun) transaction.Commit();
-                    }
-                    catch
+                    string currentValue = DisplayValueParameters.Read(param);
+                    string newValue;
+                    switch (Operation.ToLower())
                     {
-                        if (!DryRun && transaction?.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
-                        throw;
+                        case "set":
+                            if (OnlyEmpty && !string.IsNullOrEmpty(currentValue)) { skipped++; continue; }
+                            newValue = Value;
+                            break;
+                        case "prefix":
+                            if (OnlyEmpty && !string.IsNullOrEmpty(currentValue)) { skipped++; continue; }
+                            newValue = Value + currentValue;
+                            break;
+                        case "suffix":
+                            if (OnlyEmpty && !string.IsNullOrEmpty(currentValue)) { skipped++; continue; }
+                            newValue = currentValue + Value;
+                            break;
+                        case "find_replace":
+                            if (string.IsNullOrEmpty(FindText) || !currentValue.Contains(FindText)) { skipped++; continue; }
+                            newValue = currentValue.Replace(FindText, ReplaceText);
+                            break;
+                        case "clear":
+                            newValue = "";
+                            break;
+                        default:
+                            throw new ArgumentException($"Unknown operation: {Operation}");
                     }
+
+                    if (newValue == currentValue) { skipped++; continue; }
+                    changes.Add((elem, param, currentValue, newValue));
+                }
+
+                var preview = changes.Take(50).Select(c => new
+                {
+                    elementId = c.Element.Id.ToString(),
+                    elementName = c.Element.Name,
+                    currentValue = c.OldValue,
+                    newValue = c.NewValue
+                }).ToList();
+
+                if (DryRun || changes.Count == 0)
+                {
+                    Result = new AIResult<object>
+                    {
+                        Success = true,
+                        Message = $"{changes.Count} element(s) would change, {skipped} skipped" +
+                                  (DryRun ? ". Nothing was written (dryRun=true)." : "; nothing to write."),
+                        Response = new
+                        {
+                            operation = Operation,
+                            parameterName = ParameterName,
+                            toModify = changes.Count,
+                            skipped,
+                            totalElements = elements.Count,
+                            dryRun = DryRun,
+                            preview
+                        }
+                    };
+                    return;
+                }
+
+                if (!ConfirmationHelper.Confirm($"{Operation} '{ParameterName}' on", changes.Count))
+                {
+                    Result = new AIResult<object> { Success = false, Message = "Bulk modify cancelled by the user." };
+                    return;
+                }
+
+                var errors = new List<string>();
+                using (var transaction = new Transaction(doc, "Bulk Modify Parameter Values"))
+                {
+                    transaction.Start();
+                    foreach (var c in changes)
+                    {
+                        string error = DisplayValueParameters.Write(c.Param, c.NewValue);
+                        if (error != null) errors.Add($"Element {c.Element.Id}: {error}");
+                    }
+                    if (transaction.Commit() != TransactionStatus.Committed)
+                        throw new InvalidOperationException("Revit rolled the change back.");
                 }
 
                 Result = new AIResult<object>
                 {
-                    Success = true,
-                    Message = DryRun
-                        ? $"Dry run: {modified} elements would be modified, {skipped} skipped, {errors} errors"
-                        : $"Modified {modified} elements, {skipped} skipped, {errors} errors",
+                    Success = errors.Count == 0,
+                    Message = $"Modified {changes.Count - errors.Count} element(s), {skipped} skipped, {errors.Count} failed",
                     Response = new
                     {
                         operation = Operation,
                         parameterName = ParameterName,
-                        modified,
+                        modified = changes.Count - errors.Count,
                         skipped,
-                        errors,
+                        failed = errors.Count,
+                        errors = errors.Take(20).ToList(),
                         totalElements = elements.Count,
-                        dryRun = DryRun,
-                        preview = DryRun ? preview : null
+                        dryRun = false
                     }
                 };
             }

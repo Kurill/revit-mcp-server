@@ -8,9 +8,10 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateMaterialEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateMaterialEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string MaterialName { get; set; }
         public string DuplicateFrom { get; set; }
@@ -25,7 +26,6 @@ namespace RevitMCPCommandSet.Services
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -51,7 +51,7 @@ namespace RevitMCPCommandSet.Services
 
                             if (existingMat == null)
                             {
-                                transaction.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                                 Result = new AIResult<object>
                                 {
                                     Success = false,
@@ -70,7 +70,7 @@ namespace RevitMCPCommandSet.Services
 
                         if (material == null)
                         {
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                             Result = new AIResult<object>
                             {
                                 Success = false,
@@ -105,7 +105,7 @@ namespace RevitMCPCommandSet.Services
                             material.MaterialClass = MaterialClassName;
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         // Build response
                         string colorHex = null;
@@ -139,7 +139,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

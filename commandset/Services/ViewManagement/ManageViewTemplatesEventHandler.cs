@@ -8,9 +8,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class ManageViewTemplatesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ManageViewTemplatesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Action { get; set; } = "list";
         public List<long> TemplateIds { get; set; } = new();
@@ -136,7 +137,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         name = newView?.Name ?? ""
                     });
                 }
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             }
             return new { success = true, duplicated = duplicated.Count, templates = duplicated };
         }
@@ -159,7 +160,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     doc.Delete(elemId);
                     deleted++;
                 }
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             }
             return new { success = true, deleted };
         }
@@ -183,7 +184,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                 tx.Start();
                 string oldName = view.Name;
                 view.Name = NewName;
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 return new { success = true, oldName, newName = NewName };
             }
         }
@@ -218,7 +219,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     v.Name = v.Name.Replace(FindText, ReplaceText);
                     renamed++;
                 }
-                tx.Commit();
+                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
             }
             return new { success = true, renamed };
         }

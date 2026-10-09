@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Models.Common;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class SetElementWorksetCommand : ExternalEventCommandBase
+    public class SetElementWorksetCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private SetElementWorksetEventHandler _handler => (SetElementWorksetEventHandler)Handler;
@@ -18,7 +19,7 @@ namespace RevitMCPCommandSet.Commands.Access
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

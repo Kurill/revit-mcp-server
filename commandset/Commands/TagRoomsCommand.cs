@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -8,7 +9,7 @@ namespace RevitMCPCommandSet.Commands
     /// <summary>
     /// Command to create tags for rooms in the current view
     /// </summary>
-    public class TagRoomsCommand : ExternalEventCommandBase
+    public class TagRoomsCommand : GuardedCommandBase
     {
         private TagRoomsEventHandler _handler => (TagRoomsEventHandler)Handler;
 
@@ -26,7 +27,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class BulkModifyParameterValuesCommand : ExternalEventCommandBase
+    public class BulkModifyParameterValuesCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private BulkModifyParameterValuesEventHandler _handler => (BulkModifyParameterValuesEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public BulkModifyParameterValuesCommand(UIApplication uiApp)
             : base(new BulkModifyParameterValuesEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -31,7 +32,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
                     _handler.FindText = parameters?["findText"]?.Value<string>() ?? "";
                     _handler.ReplaceText = parameters?["replaceText"]?.Value<string>() ?? "";
                     _handler.OnlyEmpty = parameters?["onlyEmpty"]?.Value<bool>() ?? false;
-                    _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? false;
+                    _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? true;
 
                     _handler.SetParameters();
 

@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateArrayEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateArrayEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<long> ElementIds { get; set; } = new List<long>();
         public string ArrayType { get; set; } = "linear";
@@ -91,12 +92,12 @@ namespace RevitMCPCommandSet.Services
                             throw new ArgumentException($"Unknown array type: {ArrayType}");
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

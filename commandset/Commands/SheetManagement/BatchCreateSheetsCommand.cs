@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.SheetManagement;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.SheetManagement
 {
-    public class BatchCreateSheetsCommand : ExternalEventCommandBase
+    public class BatchCreateSheetsCommand : GuardedCommandBase
     {
         private BatchCreateSheetsEventHandler _handler => (BatchCreateSheetsEventHandler)Handler;
 
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.SheetManagement
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

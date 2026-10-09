@@ -27,6 +27,11 @@ namespace revit_mcp_plugin.Core
         private ICommandRegistry _commandRegistry;
         private ILogger _logger;
 
+
+        private const int MaxMessageChars = 16 * 1024 * 1024;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<TcpClient, byte> _clients =
+            new System.Collections.Concurrent.ConcurrentDictionary<TcpClient, byte>();
+
         public static SocketService Instance
         {
             get
@@ -209,6 +214,11 @@ namespace revit_mcp_plugin.Core
                 _listener?.Stop();
                 _listener = null;
 
+                foreach (var client in _clients.Keys)
+                {
+                    try { client.Close(); } catch { }
+                }
+
                 if(_listenerThread!=null && _listenerThread.IsAlive)
                 {
                     _listenerThread.Join(1000);
@@ -250,8 +260,12 @@ namespace revit_mcp_plugin.Core
         private void HandleClientCommunication(object clientObj)
         {
             TcpClient tcpClient = (TcpClient)clientObj;
+            _clients.TryAdd(tcpClient, 0);
             NetworkStream stream = tcpClient.GetStream();
             StringBuilder messageBuffer = new StringBuilder();
+            // A multi-byte character can be split across two reads.
+            Decoder decoder = Encoding.UTF8.GetDecoder();
+            char[] chars = new char[Encoding.UTF8.GetMaxCharCount(65536)];
 
             try
             {
@@ -273,7 +287,13 @@ namespace revit_mcp_plugin.Core
                     if (bytesRead == 0)
                         break;
 
-                    messageBuffer.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
+                    int charCount = decoder.GetChars(buffer, 0, bytesRead, chars, 0);
+                    messageBuffer.Append(chars, 0, charCount);
+                    if (messageBuffer.Length > MaxMessageChars)
+                    {
+                        McpLogger.Warn("SocketService", "Client sent more than 16M characters without a newline; closing it");
+                        break;
+                    }
 
                     // Process all complete newline-delimited messages in the buffer.
                     string bufferContent = messageBuffer.ToString();
@@ -285,6 +305,15 @@ namespace revit_mcp_plugin.Core
 
                         if (string.IsNullOrEmpty(message))
                             continue;
+
+                        // A browser can POST to localhost; its request line and headers
+                        // arrive first, so dropping the connection here keeps the body
+                        // from ever being executed.
+                        if (message[0] != '{')
+                        {
+                            McpLogger.Warn("SocketService", "Non-JSON-RPC input received; closing the connection");
+                            return;
+                        }
 
                         System.Diagnostics.Trace.WriteLine($"Received message: {message}");
                         string response = ProcessJsonRPCRequest(message);
@@ -306,6 +335,7 @@ namespace revit_mcp_plugin.Core
             }
             finally
             {
+                _clients.TryRemove(tcpClient, out _);
                 tcpClient.Close();
             }
         }

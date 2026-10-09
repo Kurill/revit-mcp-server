@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.SheetManagement
 {
-    public class DuplicateSheetWithViewsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class DuplicateSheetWithViewsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public long SheetId { get; set; }
         public int Copies { get; set; } = 1;
@@ -22,6 +22,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -253,7 +254,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                                     }
                                 }
 
-                                t.Commit();
+                                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
 
                                 createdSheets.Add(new
                                 {
@@ -270,7 +271,7 @@ namespace RevitMCPCommandSet.Services.SheetManagement
                             catch
                             {
                                 if (t.GetStatus() == TransactionStatus.Started)
-                                    t.RollBack();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                                 throw;
                             }
                         }

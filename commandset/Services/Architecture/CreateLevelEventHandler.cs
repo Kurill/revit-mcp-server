@@ -10,7 +10,7 @@ namespace RevitMCPCommandSet.Services.Architecture
     /// <summary>
     /// Event handler for creating levels in Revit
     /// </summary>
-    public class CreateLevelEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateLevelEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication _uiApp;
         private UIDocument _uiDoc => _uiApp.ActiveUIDocument;
@@ -20,6 +20,7 @@ namespace RevitMCPCommandSet.Services.Architecture
         /// Event wait object for synchronization
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Level creation data (input)
@@ -87,7 +88,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                                         AlreadyExisted = true
                                     });
 
-                                    tx.RollBack();
+                                    RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                                     continue;
                                 }
                             }
@@ -159,7 +160,7 @@ namespace RevitMCPCommandSet.Services.Architecture
                                     }
                                 }
 
-                                tx.Commit();
+                                RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
 
                                 // Add to existing names set
                                 existingLevelNames.Add(newLevel.Name);
@@ -177,13 +178,13 @@ namespace RevitMCPCommandSet.Services.Architecture
                             }
                             else
                             {
-                                tx.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                                 warnings.Add($"Failed to create level '{levelInfo.Name}'");
                             }
                         }
                         catch (Exception ex)
                         {
-                            tx.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tx);
                             warnings.Add($"Error creating level '{levelInfo.Name}': {ex.Message}");
                         }
                     }

@@ -21,6 +21,7 @@
 // SOFTWARE.
 //
 
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPSDK.API.Base;
@@ -32,7 +33,7 @@ namespace RevitMCPCommandSet.Commands.AnnotationComponents;
 /// <summary>
 ///     Command to create dimensions
 /// </summary>
-public class CreateDimensionCommand : ExternalEventCommandBase
+public class CreateDimensionCommand : GuardedCommandBase
 {
     /// <summary>
     ///     Constructor
@@ -56,7 +57,7 @@ public class CreateDimensionCommand : ExternalEventCommandBase
     /// <param name="parameters">JSON parameters</param>
     /// <param name="requestId">Request ID</param>
     /// <returns>Execution result</returns>
-    public override object Execute(JObject parameters, string requestId)
+    protected override object ExecuteCore(JObject parameters, string requestId)
     {
         try
         {

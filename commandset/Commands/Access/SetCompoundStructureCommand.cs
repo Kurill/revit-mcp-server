@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Models.Common;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class SetCompoundStructureCommand : ExternalEventCommandBase
+    public class SetCompoundStructureCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private SetCompoundStructureEventHandler _handler => (SetCompoundStructureEventHandler)Handler;
@@ -15,7 +16,7 @@ namespace RevitMCPCommandSet.Commands.Access
         public SetCompoundStructureCommand(UIApplication uiApp)
             : base(new SetCompoundStructureEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

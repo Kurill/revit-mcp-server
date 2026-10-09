@@ -5,7 +5,7 @@ using RevitMCPCommandSet.Utils;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreatePointElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreatePointElementEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -16,6 +16,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait handle
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
         /// <summary>
         /// Creation data (input data)
         /// </summary>
@@ -212,7 +213,7 @@ namespace RevitMCPCommandSet.Services
                             elementIds.Add(instance.Id.GetIntValue());
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                 }
                 string message = $"Successfully created {elementIds.Count} element(s).";
@@ -248,7 +249,6 @@ namespace RevitMCPCommandSet.Services
         /// <returns>Whether the operation completed before timeout</returns>
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
         return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 

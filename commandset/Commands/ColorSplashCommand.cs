@@ -1,11 +1,12 @@
-﻿using Autodesk.Revit.UI;
+﻿using RevitMCPCommandSet.Commands.Base;
+using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPSDK.API.Base;
 using RevitMCPCommandSet.Services;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class ColorSplashCommand : ExternalEventCommandBase
+    public class ColorSplashCommand : GuardedCommandBase
     {
         private ColorSplashEventHandler _handler => (ColorSplashEventHandler)Handler;
 
@@ -23,7 +24,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

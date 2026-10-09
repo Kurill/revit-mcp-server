@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class CreateElevationsFromRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateElevationsFromRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<long> RoomIds { get; set; } = new List<long>();
         public string ViewType { get; set; } = "elevation";
@@ -23,6 +23,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 60000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -282,12 +283,12 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         }
                     }
 
-                    t.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
                 }
                 catch
                 {
                     if (t.GetStatus() == TransactionStatus.Started)
-                        t.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                     throw;
                 }
             }
@@ -360,7 +361,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
 
                         if (sectionView == null)
                         {
-                            t.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
                             continue;
                         }
 
@@ -375,7 +376,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         string viewName = BuildViewName(roomName, roomNumber, dirDisplay, levelName);
                         try { sectionView.Name = viewName; } catch { /* name collision */ }
 
-                        t.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(t.Commit());
 
                         successCount++;
                         createdViews.Add(new
@@ -395,7 +396,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     catch (Exception ex)
                     {
                         if (t.GetStatus() == TransactionStatus.Started)
-                            t.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(t);
 
                         createdViews.Add(new
                         {

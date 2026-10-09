@@ -9,7 +9,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class CreateViewTemplateEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateViewTemplateEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public long? SourceViewId { get; set; }
         public string SourceViewName { get; set; }
@@ -18,6 +18,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -115,7 +116,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     // 5. Rename the template
                     template.Name = TemplateName;
 
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
 
                     Result = new AIResult<object>
                     {

@@ -36,7 +36,7 @@ namespace RevitMCPCommandSet.Services
     /// <summary>
     /// Event handler for creating room tags in Revit
     /// </summary>
-    public class TagRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class TagRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication _uiApp;
         private UIDocument _uiDoc => _uiApp.ActiveUIDocument;
@@ -46,6 +46,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait object for synchronization
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Tagging result data
@@ -219,7 +220,7 @@ namespace RevitMCPCommandSet.Services
                             success = false,
                             message = "No room tag family type found in the project"
                         };
-                        tran.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         return;
                     }
 
@@ -318,7 +319,7 @@ namespace RevitMCPCommandSet.Services
                         }
                     }
 
-                    tran.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tran.Commit());
 
                     string resultMessage = skippedRooms.Count > 0
                         ? $"Created {createdTags.Count} tags. Skipped {skippedRooms.Count} rooms that already had tags."
@@ -345,7 +346,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (tran.GetStatus() == TransactionStatus.Started)
-                            tran.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         throw;
                     }
                 }

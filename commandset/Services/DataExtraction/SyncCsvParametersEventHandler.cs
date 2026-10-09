@@ -6,7 +6,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class SyncCsvParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SyncCsvParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private List<ElementParameterUpdate> _updates;
         private bool _dryRun = true;
@@ -14,6 +14,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(List<ElementParameterUpdate> updates, bool dryRun)
         {
@@ -149,12 +150,12 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     }
 
                     if (!_dryRun && transaction != null)
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (!_dryRun && transaction != null)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
                 finally
@@ -209,7 +210,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                         if (double.TryParse(value, System.Globalization.NumberStyles.Any,
                             System.Globalization.CultureInfo.InvariantCulture, out double dblVal))
                             return param.Set(dblVal);
-                        return false;
+                        return param.SetValueString(value);
                     case StorageType.ElementId:
                         if (long.TryParse(value, out long idVal))
                             return param.Set(Utils.ElementIdExtensions.FromLong(idVal));

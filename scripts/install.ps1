@@ -697,9 +697,7 @@ if (-not $SkipMcpConfig) {
         $config = if ($cfgInfo.Exists -and $cfgInfo.Config) {
             $cfgInfo.Config
         } elseif ($cfgInfo.Exists) {
-            Write-Warn "Could not parse existing config  --  backing up"
-            Copy-Item $configPath "$configPath.bak" -Force
-            [PSCustomObject]@{}
+            $null
         } else { [PSCustomObject]@{} }
 
         # Use the local server installed with the plugin (not the npm package)
@@ -709,7 +707,10 @@ if (-not $SkipMcpConfig) {
             Write-Info "This should not happen  --  check that the plugin was installed correctly"
         } else {
             $nodePath = Get-NodePath
-            if (-not $nodePath) {
+            if ($null -eq $config) {
+                Write-Warn "Claude Desktop config is not valid JSON  --  leaving it untouched"
+                Write-Info "Fix $configPath, then re-run: .\install.ps1 -SkipNodeCheck"
+            } elseif (-not $nodePath) {
                 Write-Warn "Claude Desktop  --  Node.js not found (system or bundled), skipping config"
                 Write-Info "Install Node.js from https://nodejs.org then re-run: .\install.ps1 -SkipNodeCheck"
             } else {
@@ -720,7 +721,9 @@ if (-not $SkipMcpConfig) {
                 Write-Info "Node: $nodePath"
                 Write-Info "Server: $serverPath"
                 $config.mcpServers | Add-Member -NotePropertyName 'revit-mcp' -NotePropertyValue $revitMcpEntry -Force
-                $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
+                if (Test-Path $configPath) { Copy-Item $configPath "$configPath.bak" -Force }
+                # Set-Content -Encoding UTF8 writes a BOM on Windows PowerShell 5.1
+                [System.IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 10), (New-Object System.Text.UTF8Encoding $false))
                 Write-Ok "Claude Desktop  --  revit-mcp configured"
                 Write-Info "Config: $configPath"
             }

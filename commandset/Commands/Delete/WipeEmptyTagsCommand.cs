@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Delete
 {
-    public class WipeEmptyTagsCommand : ExternalEventCommandBase
+    public class WipeEmptyTagsCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private WipeEmptyTagsEventHandler _handler => (WipeEmptyTagsEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.Delete
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -31,7 +32,7 @@ namespace RevitMCPCommandSet.Commands.Delete
                 _handler.ViewId = viewId;
                 _handler.Categories = categories;
 
-                if (RaiseAndWaitForCompletion(30000))
+                if (RaiseAndWaitForCompletion(120000))
                 {
                     if (_handler.ErrorMessage != null)
                         throw new Exception(_handler.ErrorMessage);

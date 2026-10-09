@@ -1,11 +1,12 @@
-﻿using Autodesk.Revit.UI;
+﻿using RevitMCPCommandSet.Commands.Base;
+using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
 using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Access
 {
-    public class GetAvailableFamilyTypesCommand : ExternalEventCommandBase
+    public class GetAvailableFamilyTypesCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private GetAvailableFamilyTypesEventHandler _handler => (GetAvailableFamilyTypesEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.Access
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

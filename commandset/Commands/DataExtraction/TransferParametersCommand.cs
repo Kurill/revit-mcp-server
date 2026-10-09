@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.DataExtraction;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class TransferParametersCommand : ExternalEventCommandBase
+    public class TransferParametersCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private TransferParametersEventHandler _handler => (TransferParametersEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public TransferParametersCommand(UIApplication uiApp)
             : base(new TransferParametersEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

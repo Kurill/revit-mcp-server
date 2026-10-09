@@ -5,7 +5,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class ExportRoomDataEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class ExportRoomDataEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private bool _includeUnplacedRooms;
         private bool _includeNotEnclosedRooms;
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public object ResultInfo { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // All available field names for validation
         private static readonly HashSet<string> AllFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -38,7 +39,6 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -62,11 +62,10 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 foreach (Room room in roomCollector)
                 {
                     // Skip unplaced rooms if not included
-                    if (!_includeUnplacedRooms && room.Area == 0)
+                    bool unplaced = room.Location == null;
+                    if (!_includeUnplacedRooms && unplaced)
                         continue;
-
-                    // Skip not enclosed rooms if not included
-                    if (!_includeNotEnclosedRooms && room.Area == 0)
+                    if (!_includeNotEnclosedRooms && !unplaced && room.Area == 0)
                         continue;
 
                     totalCount++;
@@ -95,13 +94,13 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     if (useAllFields || fieldSet.Contains("Level"))
                         roomData["level"] = room.Level?.Name ?? "No Level";
                     if (useAllFields || fieldSet.Contains("Area"))
-                        roomData["area"] = room.Area;
+                        roomData["area"] = Round(UnitUtils.ConvertFromInternalUnits(room.Area, UnitTypeId.SquareMeters));
                     if (useAllFields || fieldSet.Contains("Volume"))
-                        roomData["volume"] = room.Volume;
+                        roomData["volume"] = Round(UnitUtils.ConvertFromInternalUnits(room.Volume, UnitTypeId.CubicMeters));
                     if (useAllFields || fieldSet.Contains("Perimeter"))
-                        roomData["perimeter"] = room.Perimeter;
+                        roomData["perimeter"] = Round(UnitUtils.ConvertFromInternalUnits(room.Perimeter, UnitTypeId.Meters));
                     if (useAllFields || fieldSet.Contains("UnboundedHeight"))
-                        roomData["unboundedHeight"] = room.UnboundedHeight;
+                        roomData["unboundedHeight"] = Round(UnitUtils.ConvertFromInternalUnits(room.UnboundedHeight, UnitTypeId.Meters));
                     if (useAllFields || fieldSet.Contains("Department"))
                         roomData["department"] = room.get_Parameter(BuiltInParameter.ROOM_DEPARTMENT)?.AsString() ?? "";
                     if (useAllFields || fieldSet.Contains("Comments"))
@@ -117,7 +116,8 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                 ResultInfo = new Dictionary<string, object>
                 {
                     { "totalRooms", totalCount },
-                    { "totalArea", totalArea },
+                    { "totalArea", Round(UnitUtils.ConvertFromInternalUnits(totalArea, UnitTypeId.SquareMeters)) },
+                    { "units", new { area = "m2", volume = "m3", perimeter = "m", unboundedHeight = "m" } },
                     { "rooms", rooms },
                     { "truncated", totalCount > rooms.Count },
                     { "totalCount", totalCount },
@@ -144,5 +144,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         {
             return "Export Room Data";
         }
+
+        private static double Round(double value) => Math.Round(value, 3);
     }
 }

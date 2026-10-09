@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class RenameViewsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class RenameViewsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Operation { get; set; } = "find_replace";
         public string Prefix { get; set; } = "";
@@ -101,7 +102,7 @@ namespace RevitMCPCommandSet.Services
                         });
                     }
 
-                    transaction?.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction?.Commit());
                 }
 
                 Result = new AIResult<object>

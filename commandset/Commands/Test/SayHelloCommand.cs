@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPSDK.API.Base;
@@ -5,7 +6,7 @@ using RevitMCPCommandSet.Services;
 
 namespace RevitMCPCommandSet.Commands.Test
 {
-    public class SayHelloCommand : ExternalEventCommandBase
+    public class SayHelloCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private SayHelloEventHandler _handler => (SayHelloEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.Test
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

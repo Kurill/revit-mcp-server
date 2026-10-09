@@ -18,7 +18,7 @@ export function registerSetElementParametersTool(server: McpServer) {
               .describe("Name of the parameter to set"),
             value: z
               .union([z.string(), z.number(), z.boolean()])
-              .describe("Value to set."),
+              .describe("Value to set. A plain number on a length/area/angle parameter is in Revit internal units (feet, square feet, radians), the same units get_element_parameters returns. A string with a unit, e.g. \"3000 mm\", is parsed in the project's units."),
           })
         )
         .describe("Array of parameter set requests"),

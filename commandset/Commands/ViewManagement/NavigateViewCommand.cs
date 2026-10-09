@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.ViewManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class NavigateViewCommand : ExternalEventCommandBase
+    public class NavigateViewCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private NavigateViewEventHandler _handler => (NavigateViewEventHandler)Handler;
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public NavigateViewCommand(UIApplication uiApp)
             : base(new NavigateViewEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

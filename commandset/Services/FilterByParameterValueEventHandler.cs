@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class FilterByParameterValueEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class FilterByParameterValueEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<string> Categories { get; set; } = new List<string>();
         public string ParameterName { get; set; } = "";
@@ -24,6 +24,7 @@ namespace RevitMCPCommandSet.Services
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

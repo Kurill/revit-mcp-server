@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateViewFilterEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateViewFilterEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string Action { get; set; } = "list";
         public string FilterName { get; set; } = "";
@@ -117,12 +118,12 @@ namespace RevitMCPCommandSet.Services
                         filter = ParameterFilterElement.Create(doc, FilterName, categoryIds);
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }
@@ -185,12 +186,12 @@ namespace RevitMCPCommandSet.Services
                         view.SetFilterOverrides(filter.Id, overrideSettings);
                     }
 
-                    transaction.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                 }
                 catch
                 {
                     if (transaction.GetStatus() == TransactionStatus.Started)
-                        transaction.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                     throw;
                 }
             }

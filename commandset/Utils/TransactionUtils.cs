@@ -43,12 +43,12 @@ public static class TransactionUtils
         try
         {
             var result = action();
-            transaction.Commit();
+            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
             return result;
         }
         catch (Exception ex)
         {
-            transaction.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
             throw new Exception($"Error executing '{transactionName}': {ex.Message}", ex);
         }
     }
@@ -66,11 +66,11 @@ public static class TransactionUtils
         try
         {
             action();
-            transaction.Commit();
+            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
         }
         catch (Exception ex)
         {
-            transaction.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
             throw new Exception($"Error executing '{transactionName}': {ex.Message}", ex);
         }
     }
@@ -100,12 +100,12 @@ public static class TransactionUtils
                 results.Add(result);
             }
 
-            transaction.Commit();
+            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
             return results;
         }
         catch (Exception ex)
         {
-            transaction.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
             throw new Exception($"Error executing batch '{transactionName}': {ex.Message}", ex);
         }
     }
@@ -126,11 +126,11 @@ public static class TransactionUtils
         try
         {
             foreach (var item in items) actionPerItem(item);
-            transaction.Commit();
+            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
         }
         catch (Exception ex)
         {
-            transaction.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
             throw new Exception($"Error executing batch '{transactionName}': {ex.Message}", ex);
         }
     }
@@ -155,7 +155,7 @@ public static class TransactionUtils
         }
         catch (Exception ex)
         {
-            group.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(group);
             throw new Exception($"Error executing transaction group '{groupName}': {ex.Message}", ex);
         }
     }
@@ -177,7 +177,7 @@ public static class TransactionUtils
         }
         catch (Exception ex)
         {
-            group.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(group);
             throw new Exception($"Error executing transaction group '{groupName}': {ex.Message}", ex);
         }
     }
@@ -231,12 +231,12 @@ public static class TransactionUtils
         try
         {
             action();
-            transaction.Commit();
+            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
             return true;
         }
         catch (Exception ex)
         {
-            transaction.RollBack();
+            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
             if (errorHandler != null) errorHandler(ex);
             return false;
         }

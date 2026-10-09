@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class CreateCalloutFromRoomsCommand : ExternalEventCommandBase
+    public class CreateCalloutFromRoomsCommand : GuardedCommandBase
     {
         private CreateCalloutFromRoomsEventHandler _handler => (CreateCalloutFromRoomsEventHandler)Handler;
         public override string CommandName => "create_callout_from_rooms";
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public CreateCalloutFromRoomsCommand(UIApplication uiApp)
             : base(new CreateCalloutFromRoomsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

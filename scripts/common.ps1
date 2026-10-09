@@ -286,7 +286,7 @@ function Get-ClaudeDesktopConfig {
     if (Test-Path $configPath) {
         $result.Exists = $true
         try {
-            $result.Config = Get-Content $configPath -Raw | ConvertFrom-Json
+            $result.Config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
             if ($result.Config.mcpServers -and $result.Config.mcpServers.'revit-mcp') {
                 $result.HasRevitMcp   = $true
                 $result.RevitMcpEntry = $result.Config.mcpServers.'revit-mcp'

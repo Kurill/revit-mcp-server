@@ -5,7 +5,7 @@ using RevitMCPCommandSet.Helpers;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class WipeEmptyTagsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class WipeEmptyTagsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public bool DryRun { get; set; } = true;
         public int? ViewId { get; set; }
@@ -15,6 +15,7 @@ namespace RevitMCPCommandSet.Services
         public string ErrorMessage { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
@@ -100,6 +101,10 @@ namespace RevitMCPCommandSet.Services
                     try
                     {
                         // Check if the tag has a valid host
+                        // GetTaggedLocalElementIds is empty for a tag on an element in a linked model.
+                        if (tag.GetTaggedElementIds().Any(link => link.LinkInstanceId != ElementId.InvalidElementId))
+                            continue;
+
                         var localIds = tag.GetTaggedLocalElementIds();
                         if (localIds == null || localIds.Count == 0)
                         {
@@ -138,8 +143,7 @@ namespace RevitMCPCommandSet.Services
                     }
                     catch
                     {
-                        isEmpty = true;
-                        reason = "Error reading tag properties";
+                        continue;
                     }
 
                     if (isEmpty)
@@ -193,7 +197,7 @@ namespace RevitMCPCommandSet.Services
                                 // Skip tags that can't be deleted
                             }
                         }
-                        tx.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                     }
                 }
 

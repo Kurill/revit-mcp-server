@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.ViewManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class CreateColorLegendCommand : ExternalEventCommandBase
+    public class CreateColorLegendCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CreateColorLegendEventHandler _handler => (CreateColorLegendEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public CreateColorLegendCommand(UIApplication uiApp)
             : base(new CreateColorLegendEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

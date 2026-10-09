@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.Selection
 {
-    public class SaveSelectionCommand : ExternalEventCommandBase
+    public class SaveSelectionCommand : GuardedCommandBase
     {
         private SaveSelectionEventHandler _handler => (SaveSelectionEventHandler)Handler;
 
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.Selection
         public SaveSelectionCommand(UIApplication uiApp)
             : base(new SaveSelectionEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

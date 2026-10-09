@@ -4,7 +4,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class GetCurrentViewElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetCurrentViewElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         // Default model category list
         private readonly List<string> _defaultModelCategories = new List<string>
@@ -54,6 +54,7 @@ namespace RevitMCPCommandSet.Services
         // State synchronization object
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         // Set query parameters
         public void SetQueryParameters(List<string> modelCategoryList, List<string> annotationCategoryList, bool includeHidden, int limit, List<string> fields = null)

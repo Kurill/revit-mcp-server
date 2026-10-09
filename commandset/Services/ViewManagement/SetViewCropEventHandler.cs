@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class SetViewCropEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SetViewCropEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public long? ViewId { get; set; }
         public bool? CropActive { get; set; }
@@ -25,6 +25,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -62,7 +63,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         if (Reset)
                         {
                             view.CropBoxActive = false;
-                            transaction.Commit();
+                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                             Result = new AIResult<object>
                             {
@@ -157,7 +158,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                             view.CropBoxVisible = CropVisible.Value;
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         // Build response with crop box info in mm
                         var currentCropBox = view.CropBox;
@@ -192,7 +193,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

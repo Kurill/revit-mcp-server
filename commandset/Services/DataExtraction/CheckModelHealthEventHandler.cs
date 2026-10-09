@@ -6,11 +6,12 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class CheckModelHealthEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CheckModelHealthEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters()
         {
@@ -20,7 +21,6 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -68,6 +68,10 @@ namespace RevitMCPCommandSet.Services.DataExtraction
                     .OfClass(typeof(Viewport))
                     .Cast<Viewport>()
                     .Select(vp => vp.ViewId)
+                    .Concat(new FilteredElementCollector(doc)
+                        .OfClass(typeof(ScheduleSheetInstance))
+                        .Cast<ScheduleSheetInstance>()
+                        .Select(ssi => ssi.ScheduleId))
                     .ToHashSet();
 
                 int unusedViewCount = allViews.Count(v => !viewsOnSheets.Contains(v.Id));

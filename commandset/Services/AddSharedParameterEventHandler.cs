@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class AddSharedParameterEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class AddSharedParameterEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public string ParameterName { get; set; }
         public string GroupName { get; set; }
@@ -117,7 +118,7 @@ namespace RevitMCPCommandSet.Services
                         if (!inserted)
                             inserted = doc.ParameterBindings.ReInsert(externalDef, binding, groupTypeId);
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         var warningMessage = unresolvedCategories.Count > 0
                             ? $" Warning: could not resolve categories: {string.Join(", ", unresolvedCategories)}."
@@ -143,7 +144,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

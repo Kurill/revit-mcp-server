@@ -5,7 +5,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class MeasureBetweenElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class MeasureBetweenElementsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private long _elementId1;
         private long _elementId2;
@@ -16,6 +16,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters(long elementId1, long elementId2, double[] point1, double[] point2, string measureType)
         {
@@ -30,7 +31,6 @@ namespace RevitMCPCommandSet.Services.DataExtraction
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 

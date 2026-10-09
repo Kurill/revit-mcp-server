@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.SheetManagement;
@@ -6,7 +7,7 @@ using System;
 
 namespace RevitMCPCommandSet.Commands.SheetManagement
 {
-    public class DuplicateSheetWithViewsCommand : ExternalEventCommandBase
+    public class DuplicateSheetWithViewsCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private DuplicateSheetWithViewsEventHandler _handler => (DuplicateSheetWithViewsEventHandler)Handler;
@@ -16,7 +17,7 @@ namespace RevitMCPCommandSet.Commands.SheetManagement
         public DuplicateSheetWithViewsCommand(UIApplication uiApp)
             : base(new DuplicateSheetWithViewsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

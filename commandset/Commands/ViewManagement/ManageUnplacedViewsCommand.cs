@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.ViewManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class ManageUnplacedViewsCommand : ExternalEventCommandBase
+    public class ManageUnplacedViewsCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private ManageUnplacedViewsEventHandler _handler => (ManageUnplacedViewsEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public ManageUnplacedViewsCommand(UIApplication uiApp)
             : base(new ManageUnplacedViewsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -32,7 +33,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
                         parameters?["maxResults"]?.Value<int>() ?? 500
                     );
 
-                    if (RaiseAndWaitForCompletion(30000))
+                    if (RaiseAndWaitForCompletion(120000))
                         return _handler.Result;
 
                     throw new TimeoutException("Manage unplaced views timed out");

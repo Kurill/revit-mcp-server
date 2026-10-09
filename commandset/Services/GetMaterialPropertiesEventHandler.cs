@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class GetMaterialPropertiesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetMaterialPropertiesEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public long? MaterialId { get; set; }
         public string MaterialName { get; set; }

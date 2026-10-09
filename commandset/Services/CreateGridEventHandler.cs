@@ -6,7 +6,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateGridEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateGridEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -16,6 +16,7 @@ namespace RevitMCPCommandSet.Services
         /// Event synchronization object
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Grid creation parameters
@@ -179,7 +180,7 @@ namespace RevitMCPCommandSet.Services
                         });
                     }
 
-                    trans.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(trans.Commit());
                 }
 
                 int renamedCount = createdGrids.Count(g => g.WasRenamed);
@@ -340,7 +341,6 @@ namespace RevitMCPCommandSet.Services
         /// </summary>
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
         return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 

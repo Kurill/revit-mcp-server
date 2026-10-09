@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.SheetManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.SheetManagement
 {
-    public class AlignViewportsCommand : ExternalEventCommandBase
+    public class AlignViewportsCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private AlignViewportsEventHandler _handler => (AlignViewportsEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.SheetManagement
         public AlignViewportsCommand(UIApplication uiApp)
             : base(new AlignViewportsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

@@ -7,9 +7,10 @@ using Newtonsoft.Json.Linq;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class SetElementParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SetElementParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<SetParameterRequest> Requests { get; set; }
         public AIResult<List<SetParameterResult>> Result { get; private set; }
@@ -115,12 +116,12 @@ namespace RevitMCPCommandSet.Services
                             results.Add(result);
                         }
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }
@@ -184,8 +185,10 @@ namespace RevitMCPCommandSet.Services
                     return false;
                 case StorageType.Double:
                     if (value is double dblVal) return param.Set(dblVal);
-                    if (double.TryParse(value.ToString(), out double parsedDbl)) return param.Set(parsedDbl);
-                    return false;
+                    if (double.TryParse(value.ToString(), System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out double parsedDbl))
+                        return param.Set(parsedDbl);
+                    return param.SetValueString(value.ToString());
                 case StorageType.ElementId:
                     if (long.TryParse(value.ToString(), out long parsedLong))
 #if REVIT2024_OR_GREATER

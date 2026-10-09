@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.Delete
 {
-    public class DeleteElementCommand : ExternalEventCommandBase
+    public class DeleteElementCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private DeleteElementEventHandler _handler => (DeleteElementEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.Delete
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -38,7 +39,7 @@ namespace RevitMCPCommandSet.Commands.Delete
                     _handler.DryRun = dryRun;
 
                     // Raise external event and wait for completion
-                    if (RaiseAndWaitForCompletion(15000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         if (_handler.IsSuccess)
                         {

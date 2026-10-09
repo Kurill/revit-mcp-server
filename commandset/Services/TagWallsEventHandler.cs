@@ -3,7 +3,7 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class TagWallsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class TagWallsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private UIApplication uiApp;
         private UIDocument uiDoc => uiApp.ActiveUIDocument;
@@ -14,6 +14,7 @@ namespace RevitMCPCommandSet.Services
         /// Event wait handle
         /// </summary>
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         /// <summary>
         /// Tag result data
@@ -67,7 +68,7 @@ namespace RevitMCPCommandSet.Services
                             success = false,
                             message = "No wall tag family type found"
                         };
-                        tran.RollBack();
+                        RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         return;
                     }
 
@@ -170,7 +171,7 @@ try
 #endif
                     }
 
-                    tran.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tran.Commit());
 
                     TaggingResults = new
                     {
@@ -184,7 +185,7 @@ try
                     catch
                     {
                         if (tran.GetStatus() == TransactionStatus.Started)
-                            tran.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(tran);
                         throw;
                     }
                 }

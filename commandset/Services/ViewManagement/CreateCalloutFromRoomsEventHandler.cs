@@ -9,9 +9,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services.ViewManagement
 {
-    public class CreateCalloutFromRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateCalloutFromRoomsEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public List<long> RoomIds { get; set; } = new();
         public string LevelName { get; set; } = "";
@@ -156,7 +157,7 @@ namespace RevitMCPCommandSet.Services.ViewManagement
                         }
                     }
 
-                    tx.Commit();
+                    RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(tx.Commit());
                 }
 
                 Result = new { success = true, created = created.Count, views = created };

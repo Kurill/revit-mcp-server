@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class SetCompoundStructureEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SetCompoundStructureEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public long? TypeId { get; set; }
         public string TypeName { get; set; }
@@ -19,7 +20,6 @@ namespace RevitMCPCommandSet.Services
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
         {
-            _resetEvent.Reset();
             return _resetEvent.WaitOne(timeoutMilliseconds);
         }
 
@@ -52,12 +52,12 @@ namespace RevitMCPCommandSet.Services
                             hostType = hostType.Duplicate(DuplicateAsName) as HostObjAttributes;
                             if (hostType == null)
                                 throw new Exception("Duplicate returned null — the type may not support duplication.");
-                            dupTx.Commit();
+                            RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(dupTx.Commit());
                         }
                         catch
                         {
                             if (dupTx.GetStatus() == TransactionStatus.Started)
-                                dupTx.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(dupTx);
                             throw;
                         }
                     }
@@ -140,12 +140,12 @@ namespace RevitMCPCommandSet.Services
                     {
                         cs.SetLayers(newLayers);
                         hostType.SetCompoundStructure(cs);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
                     }
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

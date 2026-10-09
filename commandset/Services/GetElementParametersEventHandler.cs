@@ -5,9 +5,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class GetElementParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetElementParametersEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public long[] ElementIds { get; set; }
         public bool IncludeTypeParameters { get; set; } = true;

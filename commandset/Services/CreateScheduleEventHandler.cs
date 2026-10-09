@@ -7,9 +7,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateScheduleEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateScheduleEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public ScheduleCreationInfo ScheduleInfo { get; set; }
         public AIResult<object> Result { get; private set; }
@@ -110,7 +111,7 @@ namespace RevitMCPCommandSet.Services
                         // Set display properties
                         SetDisplayProperties(schedule);
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -130,7 +131,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

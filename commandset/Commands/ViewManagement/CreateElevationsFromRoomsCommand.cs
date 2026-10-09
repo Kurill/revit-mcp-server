@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.ViewManagement;
@@ -8,7 +9,7 @@ using System.Linq;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class CreateElevationsFromRoomsCommand : ExternalEventCommandBase
+    public class CreateElevationsFromRoomsCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private CreateElevationsFromRoomsEventHandler _handler => (CreateElevationsFromRoomsEventHandler)Handler;
@@ -18,7 +19,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public CreateElevationsFromRoomsCommand(UIApplication uiApp)
             : base(new CreateElevationsFromRoomsEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

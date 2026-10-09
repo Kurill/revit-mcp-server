@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class SaveSelectionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class SaveSelectionEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public string SelectionName { get; set; } = "";
         public List<long> ElementIds { get; set; } = new List<long>();
@@ -18,6 +18,7 @@ namespace RevitMCPCommandSet.Services
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 15000) { return _resetEvent.WaitOne(timeoutMilliseconds); }
@@ -67,7 +68,7 @@ namespace RevitMCPCommandSet.Services
                         {
                             if (!Overwrite)
                             {
-                                transaction.RollBack();
+                                RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                                 Result = new AIResult<object>
                                 {
                                     Success = false,
@@ -80,7 +81,7 @@ namespace RevitMCPCommandSet.Services
 
                         var selFilter = SelectionFilterElement.Create(doc, SelectionName);
                         selFilter.SetElementIds(ids);
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -97,7 +98,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }

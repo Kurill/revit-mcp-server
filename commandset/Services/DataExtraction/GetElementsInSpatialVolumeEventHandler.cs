@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace RevitMCPCommandSet.Services.DataExtraction
 {
-    public class GetElementsInSpatialVolumeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class GetElementsInSpatialVolumeEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         public List<long> VolumeIds { get; set; } = new List<long>();
         public string VolumeType { get; set; } = "room"; // room, area, custom
@@ -27,6 +27,7 @@ namespace RevitMCPCommandSet.Services.DataExtraction
         public AIResult<object> Result { get; private set; }
         public bool TaskCompleted { get; private set; }
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public void SetParameters() { TaskCompleted = false; _resetEvent.Reset(); }
         public bool WaitForCompletion(int timeoutMilliseconds = 30000) { return _resetEvent.WaitOne(timeoutMilliseconds); }

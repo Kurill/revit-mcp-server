@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class PurgeUnusedCommand : ExternalEventCommandBase
+    public class PurgeUnusedCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private PurgeUnusedEventHandler _handler => (PurgeUnusedEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -26,7 +27,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.DryRun = parameters?["dryRun"]?.Value<bool>() ?? true;
                     _handler.MaxElements = parameters?["maxElements"]?.Value<int>() ?? 500;
 
-                    if (RaiseAndWaitForCompletion(30000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

@@ -197,15 +197,19 @@ if ($serverPath) {
 }
 
 $needWrite = $false
+$cfgInvalid = $false
 
 if (-not $mcpEntry) {
     WARN "Skipping Claude Desktop configuration -- no server available"
 } elseif (Test-Path $configPath) {
     try {
-        $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
+        $cfg = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
     } catch {
-        WARN "Existing claude_desktop_config.json is invalid JSON -- will overwrite"
+        WARN "Existing claude_desktop_config.json is not valid JSON -- leaving it untouched"
+        INFO "Fix the file, or add this under mcpServers by hand:"
+        INFO ('"revit-mcp": ' + ($mcpEntry | ConvertTo-Json -Depth 10))
         $cfg = $null
+        $cfgInvalid = $true
     }
 
     if ($cfg) {
@@ -226,7 +230,7 @@ if (-not $mcpEntry) {
             WARN "revit-mcp entry missing from config"
             $needWrite = $true
         }
-    } else {
+    } elseif (-not $cfgInvalid) {
         $needWrite = $true
     }
 } else {
@@ -245,7 +249,9 @@ if ($needWrite) {
     $cfg.mcpServers | Add-Member -NotePropertyName 'revit-mcp' -NotePropertyValue $mcpEntry -Force
 
     $json = $cfg | ConvertTo-Json -Depth 10
-    Set-Content -Path $configPath -Value $json -Encoding UTF8
+    if (Test-Path $configPath) { Copy-Item $configPath "$configPath.bak" -Force }
+    # Set-Content -Encoding UTF8 writes a BOM on Windows PowerShell 5.1
+    [System.IO.File]::WriteAllText($configPath, $json, (New-Object System.Text.UTF8Encoding $false))
     FIXED "claude_desktop_config.json updated"
     INFO $configPath
 }

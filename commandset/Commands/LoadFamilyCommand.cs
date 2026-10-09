@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
@@ -5,7 +6,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class LoadFamilyCommand : ExternalEventCommandBase
+    public class LoadFamilyCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private LoadFamilyEventHandler _handler => (LoadFamilyEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {
@@ -29,7 +30,7 @@ namespace RevitMCPCommandSet.Commands
                     _handler.SourceTypeId = parameters?["sourceTypeId"]?.Value<long>() ?? 0;
                     _handler.NewTypeName = parameters?["newTypeName"]?.Value<string>() ?? "";
 
-                    if (RaiseAndWaitForCompletion(30000))
+                    if (RaiseAndWaitForCompletion(120000))
                     {
                         return _handler.Result;
                     }

@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services.ViewManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 
 namespace RevitMCPCommandSet.Commands.ViewManagement
 {
-    public class BatchModifyViewRangeCommand : ExternalEventCommandBase
+    public class BatchModifyViewRangeCommand : GuardedCommandBase
     {
         private static readonly object _executionLock = new object();
         private BatchModifyViewRangeEventHandler _handler => (BatchModifyViewRangeEventHandler)Handler;
@@ -17,7 +18,7 @@ namespace RevitMCPCommandSet.Commands.ViewManagement
         public BatchModifyViewRangeCommand(UIApplication uiApp)
             : base(new BatchModifyViewRangeEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             lock (_executionLock)
             {

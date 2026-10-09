@@ -1,11 +1,12 @@
-﻿using Autodesk.Revit.UI;
+﻿using RevitMCPCommandSet.Commands.Base;
+using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPCommandSet.Services;
 using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands
 {
-    public class TagWallsCommand : ExternalEventCommandBase
+    public class TagWallsCommand : GuardedCommandBase
     {
         private TagWallsEventHandler _handler => (TagWallsEventHandler)Handler;
 
@@ -23,7 +24,7 @@ namespace RevitMCPCommandSet.Commands
         {
         }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {

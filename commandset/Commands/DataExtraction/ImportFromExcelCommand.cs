@@ -1,3 +1,4 @@
+using RevitMCPCommandSet.Commands.Base;
 using System;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
@@ -6,7 +7,7 @@ using RevitMCPSDK.API.Base;
 
 namespace RevitMCPCommandSet.Commands.DataExtraction
 {
-    public class ImportFromExcelCommand : ExternalEventCommandBase
+    public class ImportFromExcelCommand : GuardedCommandBase
     {
         private ImportFromExcelEventHandler _handler => (ImportFromExcelEventHandler)Handler;
         public override string CommandName => "import_from_excel";
@@ -14,14 +15,14 @@ namespace RevitMCPCommandSet.Commands.DataExtraction
         public ImportFromExcelCommand(UIApplication uiApp)
             : base(new ImportFromExcelEventHandler(), uiApp) { }
 
-        public override object Execute(JObject parameters, string requestId)
+        protected override object ExecuteCore(JObject parameters, string requestId)
         {
             try
             {
                 _handler.SetParameters(
                     filePath: parameters?["filePath"]?.ToString() ?? "",
                     sheetName: parameters?["sheetName"]?.ToString() ?? "",
-                    dryRun: parameters?["dryRun"]?.Value<bool>() ?? false
+                    dryRun: parameters?["dryRun"]?.Value<bool>() ?? true
                 );
 
                 if (RaiseAndWaitForCompletion(120000))

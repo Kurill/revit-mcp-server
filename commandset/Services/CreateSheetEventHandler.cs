@@ -6,9 +6,10 @@ using RevitMCPSDK.API.Interfaces;
 
 namespace RevitMCPCommandSet.Services
 {
-    public class CreateSheetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler
+    public class CreateSheetEventHandler : IExternalEventHandler, IWaitableExternalEventHandler, RevitMCPCommandSet.Utils.ICompletionSignal
     {
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        public ManualResetEvent CompletionSignal => _resetEvent;
 
         public SheetCreationInfo SheetInfo { get; set; }
         public AIResult<object> Result { get; private set; }
@@ -94,7 +95,7 @@ namespace RevitMCPCommandSet.Services
                         if (!string.IsNullOrEmpty(SheetInfo.SheetName))
                             sheet.Name = SheetInfo.SheetName;
 
-                        transaction.Commit();
+                        RevitMCPCommandSet.Utils.TransactionGuard.EnsureCommitted(transaction.Commit());
 
                         Result = new AIResult<object>
                         {
@@ -115,7 +116,7 @@ namespace RevitMCPCommandSet.Services
                     catch
                     {
                         if (transaction.GetStatus() == TransactionStatus.Started)
-                            transaction.RollBack();
+                            RevitMCPCommandSet.Utils.TransactionGuard.RollBackIfStarted(transaction);
                         throw;
                     }
                 }
