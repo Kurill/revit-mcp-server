@@ -105,6 +105,31 @@ describe("withRevitConnection against a fake plugin socket", () => {
     expect(fake.connectionCount).toBe(1);
   });
 
+  it("falls back to 8080 when mcp-port.txt points at a port nobody serves", async () => {
+    // A second Revit slid to 8081, wrote the file, then closed; the first still serves 8080.
+    try {
+      fake = await startFakeRevit(undefined, 8080);
+    } catch {
+      return expect.soft(fake, "8080 is busy on this machine (a real Revit?)").toBeDefined();
+    }
+    let stale: number | undefined;
+    for (let p = 8081; p <= 8089 && stale === undefined; p++) {
+      try {
+        await (await startFakeRevit(undefined, p)).close();
+        stale = p;
+      } catch {
+        /* busy - try the next one */
+      }
+    }
+    if (stale === undefined) return expect.soft(stale, "no free port in 8081-8089 on this machine").toBeDefined();
+    writePortFile("2027", String(stale));
+
+    const result = await withRevitConnection((c) => c.sendCommand("say_hello", {}));
+
+    expect(result.echo).toBe("say_hello");
+    expect(fake.connectionCount).toBe(1);
+  });
+
   it("uses the caller's timeout for commands and does not retry a command timeout", async () => {
     fake = await startFakeRevit(() => {
       /* never answer */

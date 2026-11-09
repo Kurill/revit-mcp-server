@@ -129,6 +129,27 @@ namespace revit_mcp_plugin.Core
             }
         }
 
+        // A second Revit of the same year shares this file: it slides to 8081 and
+        // overwrites it, and when it closes the file would keep pointing at its dead
+        // port while the first Revit still serves 8080. Remove the file only if it
+        // still names our port, so the MCP server falls back to 8080 instead.
+        private void RemovePortFileIfOurs(int port)
+        {
+            try
+            {
+                string pluginDir = Path.GetDirectoryName(typeof(SocketService).Assembly.Location);
+                string portFilePath = Path.Combine(pluginDir, "mcp-port.txt");
+                if (!File.Exists(portFilePath)) return;
+                if (File.ReadAllText(portFilePath).Trim() != port.ToString()) return;
+                File.Delete(portFilePath);
+                McpLogger.Info("SocketService", $"Port file {portFilePath} removed (port {port} released)");
+            }
+            catch (Exception ex)
+            {
+                McpLogger.Error("SocketService", "Failed to remove port file", ex);
+            }
+        }
+
         public void Start()
         {
             if (_isRunning) return;
@@ -223,6 +244,8 @@ namespace revit_mcp_plugin.Core
                 {
                     _listenerThread.Join(1000);
                 }
+
+                RemovePortFileIfOurs(_port);
             }
             catch (Exception ex)
             {

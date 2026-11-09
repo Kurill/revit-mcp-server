@@ -95,6 +95,41 @@ async function attemptConnection<T>(
   }
 }
 
+function isConnectionError(error: any): boolean {
+  const msg = error?.message || "";
+  return (
+    msg.includes("Connect to Revit client failed") ||
+    msg.includes("Connection to Revit client timed out")
+  );
+}
+
+/**
+ * Try the port from mcp-port.txt, then 8080 if that one is unreachable.
+ * The file can be stale: a second Revit slides to 8081 and writes it, then
+ * closes (or crashes) while the first Revit keeps serving 8080.
+ * REVIT_MCP_PORT, when set, is the only candidate.
+ */
+async function attemptOnCandidatePorts<T>(
+  operation: (client: RevitClientConnection) => Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  const port = readPortFromFile();
+  const override = Number(process.env.REVIT_MCP_PORT?.trim());
+  const overridden = Number.isInteger(override) && override > 0 && override <= 65535;
+  const candidates = overridden || port === 8080 ? [port] : [port, 8080];
+
+  let lastError: any;
+  for (const candidate of candidates) {
+    try {
+      return await attemptConnection(candidate, operation, timeoutMs);
+    } catch (error: any) {
+      if (!isConnectionError(error)) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 /**
  * Connect to the Revit client and execute an operation.
  * Retries on connection failure with exponential backoff.
@@ -115,20 +150,14 @@ export async function withRevitConnection<T>(
   });
   await previousMutex;
 
-  const port = readPortFromFile();
-
   try {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        return await attemptConnection(port, operation, timeoutMs);
+        // Re-read every attempt: the plugin may rewrite mcp-port.txt meanwhile.
+        return await attemptOnCandidatePorts(operation, timeoutMs);
       } catch (error: any) {
-        const msg = error?.message || "";
-        const isConnectionError =
-          msg.includes("Connect to Revit client failed") ||
-          msg.includes("Connection to Revit client timed out");
-
         // Only retry on connection failures, not on command timeouts or other errors
-        if (!isConnectionError || attempt >= MAX_RETRIES - 1) {
+        if (!isConnectionError(error) || attempt >= MAX_RETRIES - 1) {
           throw error;
         }
 
